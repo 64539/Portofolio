@@ -1,0 +1,184 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+  background: #05070f;
+  color: #eaeaff;
+}
+
+/* ===== NAVBAR ===== */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 60px;
+  background: #02040a;
+  border-bottom: 1px solid #0a1a3a;
+}
+
+.logo {
+  color: #3b82f6;
+}
+.logo span {
+  color: #ffffff;
+}
+
+nav a {
+  color: #b6c6ff;
+  margin-left: 25px;
+  text-decoration: none;
+  transition: 0.3s;
+}
+nav a:hover {
+  color: #3b82f6;
+}
+
+/* ===== HERO ===== */
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 90px 60px;
+}
+
+.hero-text h1 {
+  font-size: 42px;
+}
+.hero-text span {
+  color: #3b82f6;
+}
+
+.hero-text p {
+  margin-top: 15px;
+  color: #a5b4fc;
+  max-width: 420px;
+}
+
+.hero button {
+  margin-top: 25px;
+  padding: 12px 30px;
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  border: none;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.hero-img img {
+  width: 260px;
+  border-radius: 50%;
+  border: 4px solid #2563eb;
+}
+
+/* ===== SECTION ===== */
+.section-title {
+  text-align: center;
+  font-size: 28px;
+  margin-bottom: 50px;
+  color: #60a5fa;
+}
+
+.services, .skills, .projects, .contact {
+  padding: 70px 60px;
+}
+
+/* ===== SERVICES ===== */
+.service-box {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 25px;
+}
+
+.card {
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  padding: 35px;
+  text-align: center;
+  border-radius: 14px;
+  border: 1px solid #0f1c3f;
+  transition: 0.3s;
+}
+.card:hover {
+  transform: translateY(-6px);
+  border-color: #2563eb;
+}
+
+/* ===== SKILLS ===== */
+.skill {
+  margin-bottom: 25px;
+}
+
+.skill span {
+  display: block;
+  margin-bottom: 8px;
+  color: #93c5fd;
+}
+
+.bar {
+  background: #020617;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.bar div {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
+  transition: 1s;
+}
+
+/* ===== PROJECTS ===== */
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 25px;
+}
+
+.project-card {
+  background: #020617;
+  padding: 45px;
+  border-radius: 14px;
+  border: 1px solid #0f1c3f;
+  color: #bfdbfe;
+}
+
+/* ===== CONTACT ===== */
+.contact form {
+  max-width: 420px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.contact input,
+.contact textarea {
+  margin-bottom: 15px;
+  padding: 12px;
+  background: #020617;
+  border: 1px solid #0f1c3f;
+  color: white;
+  border-radius: 6px;
+}
+
+.contact button {
+  padding: 12px;
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  border: none;
+  color: white;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* ===== FOOTER ===== */
+footer {
+  text-align: center;
+  padding: 20px;
+  background: #02040a;
+  color: #94a3b8;
+}
