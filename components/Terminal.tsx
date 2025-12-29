@@ -8,14 +8,19 @@ import { createSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 
 const AdminConsole = dynamic(() => import("./AdminConsole"), { ssr: false });
 
-export default function Terminal() {
-  const expectedAdminKey = process.env.NEXT_PUBLIC_ADMIN_SECRET_KEY ?? "23112311";
+type TerminalProps = {
+  isExpanded: boolean;
+  onCollapse: () => void;
+  onExpand?: () => void;
+};
+
+export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalProps) {
+  const expectedAdminKey = process.env.NEXT_PUBLIC_ADMIN_SECRET_KEY;
 
   const [command, setCommand] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const [adminStep, setAdminStep] = useState<"idle" | "awaiting_password">("idle");
   const [adminKey, setAdminKey] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
   const [userSession] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     const existing = window.localStorage.getItem("user_session");
@@ -26,6 +31,8 @@ export default function Terminal() {
 
   const typingTimerRef = useRef<number | null>(null);
   const typingIndexRef = useRef<number>(-1);
+  const collapsedRef = useRef<HTMLDivElement | null>(null);
+  const [maxLines, setMaxLines] = useState(18);
 
   const supabase = useMemo(() => {
     try {
@@ -36,7 +43,23 @@ export default function Terminal() {
   }, []);
 
   useEffect(() => {
-    console.log("[AdminAccess] NEXT_PUBLIC_ADMIN_SECRET_KEY present:", Boolean(process.env.NEXT_PUBLIC_ADMIN_SECRET_KEY));
+    console.log("[AdminAccess] NEXT_PUBLIC_ADMIN_SECRET_KEY:", process.env.NEXT_PUBLIC_ADMIN_SECRET_KEY ? "[set]" : "[undefined]");
+  }, []);
+
+  useEffect(() => {
+    const el = collapsedRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+
+    const ro = new ResizeObserver((entries) => {
+      const h = entries[0]?.contentRect?.height ?? 0;
+      const next = Math.max(10, Math.floor((h - 84) / 16));
+      setMaxLines(next);
+    });
+
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+    };
   }, []);
 
   const typeLine = useCallback((prefix: string, content: string) => {
@@ -98,7 +121,7 @@ export default function Terminal() {
 
     if (adminKey) {
       if (outgoing === "exit") {
-        setExpanded(false);
+        onCollapse();
       } else {
         setHistory((prev) => [...prev, `> ${outgoing}`, `[SYSTEM] Root terminal active. Type "exit" to minimize.`]);
       }
@@ -117,11 +140,17 @@ export default function Terminal() {
     if (adminStep === "awaiting_password") {
       setHistory((prev) => [...prev, `> ${"*".repeat(Math.min(outgoing.length, 24))}`, `[SYSTEM] Verifying...`]);
 
+      if (!expectedAdminKey) {
+        setHistory((prev) => [...prev, `[SYSTEM] ADMIN_SECRET_UNDEFINED`]);
+        setAdminStep("idle");
+        return;
+      }
+
       if (outgoing === expectedAdminKey) {
         setHistory((prev) => [...prev, `[SYSTEM] ROOT_ACCESS_GRANTED`]);
         setAdminKey(outgoing);
         setAdminStep("idle");
-        setExpanded(true);
+        onExpand?.();
       } else {
         setHistory((prev) => [...prev, `[SYSTEM] ACCESS_DENIED`]);
         setAdminStep("idle");
@@ -160,18 +189,18 @@ export default function Terminal() {
   return (
     <div className="relative">
       <AnimatePresence>
-        {expanded && adminKey ? (
+        {isExpanded && adminKey ? (
           <motion.div
             key="terminal-expanded"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70]"
+            className="fixed inset-0 z-[1000]"
           >
             <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
             <motion.div
               layoutId="terminal"
-              transition={{ type: "spring", stiffness: 260, damping: 30 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
               className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vh] glass-panel rounded-xl overflow-hidden border border-amber-400/30"
             >
               <div className="bg-black/85 px-3 py-2 border-b border-white/10 flex items-center justify-between">
@@ -181,7 +210,7 @@ export default function Terminal() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setExpanded(false)}
+                  onClick={onCollapse}
                   className="p-2 rounded border border-amber-400/20 hover:border-amber-400/40"
                 >
                   <X className="w-4 h-4 text-amber-200" />
@@ -196,9 +225,9 @@ export default function Terminal() {
           <motion.div
             key="terminal-collapsed"
             layoutId="terminal"
-            transition={{ type: "spring", stiffness: 260, damping: 30 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
             className={
-              "w-full h-[320px] rounded-lg overflow-hidden border shadow-[0_0_18px_rgba(0,0,0,0.35)] " +
+              "relative z-10 w-full lg:w-[400px] h-[300px] rounded-lg overflow-hidden border shadow-[0_0_18px_rgba(0,0,0,0.35)] " +
               (adminKey ? "border-amber-400/35" : "border-cyber-blue/30")
             }
           >
@@ -217,7 +246,7 @@ export default function Terminal() {
               {adminKey ? (
                 <button
                   type="button"
-                  onClick={() => setExpanded(true)}
+                  onClick={onExpand}
                   className="text-[10px] font-mono px-2 py-1 rounded border border-amber-400/30 text-amber-300 hover:bg-amber-500/10"
                 >
                   OPEN
@@ -225,12 +254,12 @@ export default function Terminal() {
               ) : null}
             </div>
 
-            <div className="p-3 h-[calc(320px-40px)] bg-black/80 font-mono text-xs flex flex-col">
+            <div ref={collapsedRef} className="p-3 h-[calc(300px-40px)] bg-black/80 font-mono text-xs flex flex-col">
               <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                 {history.length === 0 ? (
                   <div className="text-gray-600">Type message or run secret command.</div>
                 ) : (
-                  history.slice(-20).map((line, i) => (
+                  history.slice(-maxLines).map((line, i) => (
                     <div
                       key={i}
                       className={
