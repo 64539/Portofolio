@@ -6,7 +6,7 @@ export async function POST(req: Request) {
   try {
     const body = (await req.json()) as { secretKey?: string };
     const provided = (body.secretKey ?? "").trim();
-    const expected = process.env.ADMIN_SECRET_KEY ?? "";
+    const expected = process.env.NEXT_PUBLIC_ADMIN_SECRET_KEY ?? process.env.ADMIN_SECRET_KEY ?? "";
 
     if (!expected) {
       return NextResponse.json({ ok: false, error: "ADMIN_SECRET_NOT_SET" }, { status: 500 });

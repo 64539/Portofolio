@@ -13,7 +13,7 @@ type MessageRow = {
 
 export async function GET(req: Request) {
   try {
-    const expected = process.env.ADMIN_SECRET_KEY ?? "";
+    const expected = process.env.NEXT_PUBLIC_ADMIN_SECRET_KEY ?? process.env.ADMIN_SECRET_KEY ?? "";
     const provided = (req.headers.get("x-admin-key") ?? "").trim();
 
     if (!expected) {
@@ -71,7 +71,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const expected = process.env.ADMIN_SECRET_KEY ?? "";
+    const expected = process.env.NEXT_PUBLIC_ADMIN_SECRET_KEY ?? process.env.ADMIN_SECRET_KEY ?? "";
     const provided = (req.headers.get("x-admin-key") ?? "").trim();
 
     if (!expected) {

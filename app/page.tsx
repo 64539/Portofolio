@@ -1,7 +1,7 @@
 import Hero from "@/components/Hero";
 import SkillMonitors from "@/components/SkillMonitors";
 import DualEngineShowcase from "@/components/DualEngineShowcase";
-import CyberMap from "@/components/CyberMap";
+import OperationalBase from "@/components/OperationalBase";
 import ContactHub from "@/components/ContactHub";
 
 export default function Home() {
@@ -10,7 +10,7 @@ export default function Home() {
       <Hero />
       <SkillMonitors />
       <DualEngineShowcase />
-      <CyberMap />
+      <OperationalBase />
       <ContactHub />
       
       <footer className="py-8 text-center text-xs font-mono text-gray-600 relative z-10 bg-black">
