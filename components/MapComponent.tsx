@@ -3,9 +3,7 @@
 import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { useEffect } from "react";
 
-// Fix for default marker icon in Next.js
 const iconUrl = "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png";
 const iconRetinaUrl = "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png";
 const shadowUrl = "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png";
@@ -21,11 +19,12 @@ const customIcon = new L.Icon({
 });
 
 export default function MapComponent() {
-  const position: [number, number] = [-6.1115, 106.8926]; // North Jakarta
+  const basePosition: [number, number] = [-6.1115, 106.8926];
+  const schoolPosition: [number, number] = [-6.1098, 106.8912];
 
   return (
     <MapContainer
-      center={position}
+      center={basePosition}
       zoom={13}
       scrollWheelZoom={false}
       className="w-full h-full z-0"
@@ -35,7 +34,7 @@ export default function MapComponent() {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       />
-      <Marker position={position} icon={customIcon}>
+      <Marker position={basePosition} icon={customIcon}>
         <Popup className="glass-popup">
           <div className="font-mono text-sm">
             <strong className="text-cyber-blue">BASE OF OPERATIONS</strong><br />
@@ -45,10 +44,32 @@ export default function MapComponent() {
         </Popup>
       </Marker>
       <Circle
-        center={position}
-        pathOptions={{ fillColor: '#3b82f6', color: '#3b82f6' }}
+        center={basePosition}
+        pathOptions={{ fillColor: "#3b82f6", color: "#3b82f6", fillOpacity: 0.12, opacity: 0.4 }}
         radius={1000}
         className="animate-pulse-slow"
+      />
+
+      <Marker position={schoolPosition} icon={customIcon}>
+        <Popup className="glass-popup">
+          <div className="font-mono text-sm">
+            <strong className="text-cyber-cyan">CORE EDUCATION SECTOR</strong>
+            <br />
+            SMKN 12 Jakarta (Kebon Bawang)
+          </div>
+        </Popup>
+      </Marker>
+      <Circle
+        center={schoolPosition}
+        pathOptions={{ fillColor: "#06b6d4", color: "#06b6d4", fillOpacity: 0.18, opacity: 0.9 }}
+        radius={420}
+        className="radar-pulse"
+      />
+      <Circle
+        center={schoolPosition}
+        pathOptions={{ color: "#06b6d4", opacity: 0.5 }}
+        radius={900}
+        className="radar-ring"
       />
     </MapContainer>
   );

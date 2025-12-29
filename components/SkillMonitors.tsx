@@ -1,51 +1,41 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Monitor, Code, Database, Brain, Lock } from "lucide-react";
+import { Code2, Database, Brain, Lock, Code } from "lucide-react";
 
-const skills = [
-  {
-    category: "Frontend Architecture",
-    icon: Monitor,
-    color: "text-blue-400",
-    items: [
-      { name: "Next.js", level: 85 },
+const data = {
+  skills: {
+    core_decryption: [
+      { name: "Next.js", level: 95 },
       { name: "React", level: 90 },
-      { name: "Tailwind CSS", level: 95 },
-      { name: "Bootstrap", level: 85 },
+      { name: "Tailwind CSS", level: 85 },
+      { name: "TypeScript", level: 80 },
+    ],
+    backend_architecture: [
+      { name: "Node.js", level: 88 },
+      { name: "Python", level: 82 },
+      { name: "FastAPI", level: 75 },
+      { name: "Supabase/Postgres", level: 85 },
+    ],
+    neural_uplink: [
+      { name: "LLM Integration", level: 80 },
+      { name: "Prompt Engineering", level: 90 },
+      { name: "LangChain", level: 70 },
+    ],
+    security_protocols: [
+      { name: "JWT/OAuth 2.0", level: 85 },
+      { name: "Web Encryption", level: 80 },
+      { name: "OWASP Top 10", level: 75 },
     ],
   },
-  {
-    category: "Backend Systems",
-    icon: Database,
-    color: "text-green-400",
-    items: [
-      { name: "Node.js", level: 90 },
-      { name: "Express", level: 85 },
-      { name: "REST API", level: 90 },
-    ],
-  },
-  {
-    category: "AI Integration",
-    icon: Brain,
-    color: "text-purple-400",
-    items: [
-      { name: "Dual-Engine AI", level: 70 },
-      { name: "PyTorch", level: 75 },
-      { name: "OS Control", level: 65 },
-    ],
-  },
-  {
-    category: "Security Protocols",
-    icon: Lock,
-    color: "text-red-400",
-    items: [
-      { name: "Hardened Arch", level: 79 },
-      { name: "Vuln Research", level: 65 },
-      { name: "Red Hat Sec", level: 70 },
-    ],
-  },
-];
+} as const;
+
+const skillGroups = [
+  { label: "CORE_DECRYPTION", icon: Code2, color: "text-cyber-blue", items: data.skills.core_decryption },
+  { label: "BACKEND_ARCHITECTURE", icon: Database, color: "text-emerald-400", items: data.skills.backend_architecture },
+  { label: "NEURAL_UPLINK", icon: Brain, color: "text-cyber-cyan", items: data.skills.neural_uplink },
+  { label: "SECURITY_PROTOCOLS", icon: Lock, color: "text-rose-400", items: data.skills.security_protocols },
+] as const;
 
 const SegmentedBar = ({ level, colorClass }: { level: number; colorClass: string }) => {
   const segments = 20;
@@ -85,7 +75,7 @@ export default function SkillMonitors() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {skills.map((skill, index) => (
+          {skillGroups.map((skill, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
@@ -97,7 +87,7 @@ export default function SkillMonitors() {
               <div className="flex items-center gap-3 mb-6">
                 <skill.icon className={`w-6 h-6 ${skill.color}`} />
                 <h3 className="text-xl font-mono font-bold uppercase tracking-wider">
-                  {skill.category}
+                  {skill.label}
                 </h3>
               </div>
 

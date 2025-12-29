@@ -15,44 +15,20 @@ export default function NeuralBackground() {
     let w = (canvas.width = window.innerWidth);
     let h = (canvas.height = window.innerHeight);
 
-    const particles: Particle[] = [];
+    const particles: Array<{ x: number; y: number; vx: number; vy: number; size: number }> = [];
     const particleCount = 50;
     const connectionDistance = 150;
 
-    class Particle {
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      size: number;
-
-      constructor() {
-        this.x = Math.random() * w;
-        this.y = Math.random() * h;
-        this.vx = (Math.random() - 0.5) * 0.5;
-        this.vy = (Math.random() - 0.5) * 0.5;
-        this.size = Math.random() * 2 + 1;
-      }
-
-      update() {
-        this.x += this.vx;
-        this.y += this.vy;
-
-        if (this.x < 0 || this.x > w) this.vx *= -1;
-        if (this.y < 0 || this.y > h) this.vy *= -1;
-      }
-
-      draw() {
-        if (!ctx) return;
-        ctx.fillStyle = "rgba(59, 130, 246, 0.5)";
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
+    const createParticle = () => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
+      size: Math.random() * 2 + 1,
+    });
 
     for (let i = 0; i < particleCount; i++) {
-      particles.push(new Particle());
+      particles.push(createParticle());
     }
 
     function animate() {
@@ -60,8 +36,16 @@ export default function NeuralBackground() {
       ctx.clearRect(0, 0, w, h);
 
       particles.forEach((p, index) => {
-        p.update();
-        p.draw();
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < 0 || p.x > w) p.vx *= -1;
+        if (p.y < 0 || p.y > h) p.vy *= -1;
+
+        ctx.fillStyle = "rgba(59, 130, 246, 0.5)";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
 
         for (let j = index + 1; j < particles.length; j++) {
           const p2 = particles[j];

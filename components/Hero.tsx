@@ -1,15 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import GlitchText from "./ui/GlitchText";
 import CyberButton from "./ui/CyberButton";
 import NeuralBackground from "./NeuralBackground";
-import { Terminal, Shield, Cpu } from "lucide-react";
+import { Shield, Cpu } from "lucide-react";
+import SystemDiagnosticModal from "./SystemDiagnosticModal";
 
 export default function Hero() {
+  const [diagnosticOpen, setDiagnosticOpen] = useState(false);
+
   return (
     <section className="relative min-h-screen flex flex-col justify-center items-center overflow-hidden pt-20">
       <NeuralBackground />
+
+      <SystemDiagnosticModal open={diagnosticOpen} onClose={() => setDiagnosticOpen(false)} />
       
       <div className="z-10 container mx-auto px-4 text-center">
         <motion.div
@@ -83,13 +89,12 @@ export default function Hero() {
           <CyberButton onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}>
             Initiate Contact
           </CyberButton>
-          <CyberButton variant="secondary" onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })}>
-            View Protocols
+          <CyberButton variant="secondary" onClick={() => setDiagnosticOpen(true)}>
+            View Protocol
           </CyberButton>
         </motion.div>
       </div>
       
-      {/* Decorative Elements */}
       <div className="absolute bottom-10 left-10 hidden md:block">
         <div className="text-[10px] font-mono text-cyber-blue/50">
           <div>SYS.ID: 64539</div>
