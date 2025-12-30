@@ -43,10 +43,6 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
   }, []);
 
   useEffect(() => {
-    console.log("[AdminAccess] NEXT_PUBLIC_ADMIN_SECRET_KEY:", process.env.NEXT_PUBLIC_ADMIN_SECRET_KEY ? "[set]" : "[undefined]");
-  }, []);
-
-  useEffect(() => {
     const el = collapsedRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
 
@@ -197,11 +193,11 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[1000]"
           >
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-2xl backdrop-saturate-150" />
             <motion.div
               layoutId="terminal"
               transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vh] glass-panel rounded-xl overflow-hidden border border-amber-400/30"
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(92vw,1100px)] h-[min(88vh,820px)] rounded-xl overflow-hidden border border-amber-400/30 bg-black/85 shadow-[0_0_32px_rgba(251,191,36,0.10)]"
             >
               <div className="bg-black/85 px-3 py-2 border-b border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -216,7 +212,7 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
                   <X className="w-4 h-4 text-amber-200" />
                 </button>
               </div>
-              <div className="p-4 h-[calc(80vh-44px)]">
+              <div className="p-3 sm:p-4 h-[calc(min(88vh,820px)-44px)]">
                 <AdminConsole adminKey={adminKey} />
               </div>
             </motion.div>

@@ -161,14 +161,17 @@ export default function AdminConsole({ adminKey }: { adminKey: string }) {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 h-full">
-      <div className="lg:col-span-2 glass-panel rounded-lg overflow-hidden">
-        <div className="px-4 py-3 bg-black/70 border-b border-white/10">
-          <div className="font-mono text-xs text-amber-300">SESSIONS</div>
+    <div className="h-full flex flex-col lg:grid lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="lg:col-span-2 glass-panel rounded-lg overflow-hidden flex flex-col h-[160px] lg:h-full">
+        <div className="px-4 py-3 bg-black/70 border-b border-white/10 flex items-center justify-between">
+          <div className="font-mono text-[11px] tracking-wide text-amber-300">SESSIONS</div>
+          <div className="font-mono text-[10px] text-gray-500">{sessions.length}</div>
         </div>
-        <div className="p-2 h-[calc(80vh-180px)] lg:h-[calc(80vh-140px)] overflow-y-auto">
+        <div className="p-2 flex-1 overflow-y-auto">
           {loadingSessions ? (
-            <div className="p-4 font-mono text-xs text-gray-500">Downloading session index...</div>
+            <div className="p-3 font-mono text-[11px] text-gray-500">Downloading session index...</div>
+          ) : sessions.length === 0 ? (
+            <div className="p-3 font-mono text-[11px] text-gray-500">No sessions.</div>
           ) : (
             <motion.div variants={listVariants} initial="hidden" animate="show" className="space-y-2">
               {sessions.map((s) => (
@@ -178,7 +181,7 @@ export default function AdminConsole({ adminKey }: { adminKey: string }) {
                   type="button"
                   onClick={() => setSelectedSession(s)}
                   className={
-                    "w-full text-left px-3 py-2 rounded border font-mono text-xs transition-colors " +
+                    "w-full text-left px-3 py-2 rounded border font-mono text-[11px] transition-colors " +
                     (s === selectedSession
                       ? "bg-amber-500/15 border-amber-400/40 text-amber-200"
                       : "bg-black/40 border-white/10 text-gray-400 hover:text-gray-200 hover:border-amber-400/25")
@@ -192,17 +195,17 @@ export default function AdminConsole({ adminKey }: { adminKey: string }) {
         </div>
       </div>
 
-      <div className="lg:col-span-3 glass-panel rounded-lg overflow-hidden flex flex-col">
-        <div className="px-4 py-3 bg-black/70 border-b border-white/10 flex items-center justify-between">
-          <div className="font-mono text-xs text-amber-300">CONSOLE</div>
-          <div className="font-mono text-[10px] text-gray-500">{selectedSession ? `user_session=${selectedSession}` : "no session"}</div>
+      <div className="lg:col-span-3 glass-panel rounded-lg overflow-hidden flex flex-col flex-1 min-h-0">
+        <div className="px-4 py-3 bg-black/70 border-b border-white/10 flex items-center justify-between gap-3">
+          <div className="font-mono text-[11px] tracking-wide text-amber-300">CONSOLE</div>
+          <div className="font-mono text-[10px] text-gray-500 truncate">{selectedSession ? `user_session=${selectedSession}` : "no session"}</div>
         </div>
 
-        <div ref={logRef} className="flex-1 p-4 bg-black/70 overflow-y-auto font-mono text-sm">
+        <div ref={logRef} className="flex-1 min-h-0 p-3 sm:p-4 bg-black/70 overflow-y-auto font-mono text-[12px] sm:text-[13px]">
           {loadingMessages ? (
-            <div className="text-gray-500 text-xs">Syncing conversation log...</div>
+            <div className="text-gray-500 text-[11px]">Syncing conversation log...</div>
           ) : messages.length === 0 ? (
-            <div className="text-gray-500 text-xs">No messages.</div>
+            <div className="text-gray-500 text-[11px]">No messages.</div>
           ) : (
             <motion.div variants={listVariants} initial="hidden" animate="show" className="space-y-3">
               {messages.map((m) => (
@@ -228,7 +231,7 @@ export default function AdminConsole({ adminKey }: { adminKey: string }) {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            className="flex-1 bg-transparent border-none outline-none text-gray-200 placeholder:text-gray-600 font-mono text-sm"
+            className="flex-1 bg-transparent border-none outline-none text-gray-200 placeholder:text-gray-600 font-mono text-[13px]"
             placeholder={selectedSession ? "Reply as admin..." : "Select a session..."}
             disabled={!selectedSession}
           />
