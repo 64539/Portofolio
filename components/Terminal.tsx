@@ -1,393 +1,372 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { Send, Terminal as TerminalIcon, X } from "lucide-react";
-import dynamic from "next/dynamic";
-import { createSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { useRef, useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Terminal as TerminalIcon } from "lucide-react";
+import { useTerminalLogic } from "@/hooks/useTerminalLogic";
 
-const AdminConsole = dynamic(() => import("./AdminConsole"), { ssr: false });
+export default function Terminal() {
+  const {
+    mode,
+    setMode,
+    view,
+    setView,
+    inputBuffer,
+    setInputBuffer,
+    history,
+    addToHistory,
+    processCommand,
+    messages,
+    selectedMessage,
+    setSelectedMessage,
+    stats,
+    receiptData,
+    setReceiptData
+  } = useTerminalLogic();
 
-type TerminalProps = {
-  isExpanded: boolean;
-  onCollapse: () => void;
-  onExpand?: () => void;
-};
-
-export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalProps) {
-  const [command, setCommand] = useState("");
-  const [history, setHistory] = useState<string[]>([]);
-  const [adminStep, setAdminStep] = useState<"idle" | "awaiting_password">("idle");
-  const [adminKey, setAdminKey] = useState<string | null>(null);
-  const [userSession] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    const existing = window.localStorage.getItem("user_session");
-    const next = existing ?? crypto.randomUUID();
-    window.localStorage.setItem("user_session", next);
-    return next;
-  });
-
-  const [showVerification, setShowVerification] = useState(false);
-  const [pendingMessage, setPendingMessage] = useState("");
   const [userDetails, setUserDetails] = useState({ name: "", email: "" });
+  const [showVerification, setShowVerification] = useState(false);
+  const [isTransmitting, setIsTransmitting] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const typingTimerRef = useRef<number | null>(null);
-  const typingIndexRef = useRef<number>(-1);
-  const collapsedRef = useRef<HTMLDivElement | null>(null);
-  const [maxLines, setMaxLines] = useState(18);
-
-  const supabase = useMemo(() => {
-    try {
-      return createSupabaseBrowserClient();
-    } catch {
-      return null;
+  // Auto-scroll history
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, []);
+  }, [history]);
 
-  useEffect(() => {
-    const el = collapsedRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-
-    const ro = new ResizeObserver((entries) => {
-      const h = entries[0]?.contentRect?.height ?? 0;
-      const next = Math.max(10, Math.floor((h - 84) / 16));
-      setMaxLines(next);
-    });
-
-    ro.observe(el);
-    return () => {
-      ro.disconnect();
-    };
-  }, []);
-
-  const typeLine = useCallback((prefix: string, content: string) => {
-    if (typingTimerRef.current) window.clearInterval(typingTimerRef.current);
-
-    setHistory((prev) => {
-      typingIndexRef.current = prev.length;
-      return [...prev, ""];
-    });
-
-    const full = `${prefix}${content}`;
-    let i = 0;
-    typingTimerRef.current = window.setInterval(() => {
-      i += 2;
-      setHistory((prev) =>
-        prev.map((line, idx) => (idx === typingIndexRef.current ? full.slice(0, Math.min(i, full.length)) : line))
-      );
-
-      if (i >= full.length && typingTimerRef.current) {
-        window.clearInterval(typingTimerRef.current);
-        typingTimerRef.current = null;
-      }
-    }, 14);
-  }, []);
-
-  useEffect(() => {
-    if (!supabase || !userSession) return;
-
-    const channel = supabase
-      .channel(`messages:${userSession}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `user_session=eq.${userSession}` },
-        (payload) => {
-          const row = payload.new as { user_session: string; content: string; is_from_admin: boolean };
-          if (!row.is_from_admin) return;
-          typeLine(`[ADMIN] `, row.content);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [supabase, typeLine, userSession]);
-
-  useEffect(() => {
-    return () => {
-      if (typingTimerRef.current) window.clearInterval(typingTimerRef.current);
-    };
-  }, []);
-
-  const handleVerificationSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userDetails.name || !userDetails.email) return;
+    if (!inputBuffer.trim()) return;
+
+    const cmd = inputBuffer.trim();
+    setInputBuffer("");
     
-    // Basic email validation
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userDetails.email)) {
-      setHistory((prev) => [...prev, `[SYSTEM] Invalid email format.`]);
-      return;
-    }
-
-    setShowVerification(false);
-    
-    // Construct JSON content
-    const contentPayload = JSON.stringify({
-      text: pendingMessage,
-      name: userDetails.name,
-      email: userDetails.email,
-      timestamp: new Date().toISOString()
-    });
-
-    setHistory((prev) => [...prev, `> ${pendingMessage}`, `[SYSTEM] Verifying identity... OK`, `[SYSTEM] Transmitting...`]);
-    
-    void sendMessage(contentPayload);
-    setPendingMessage("");
-  };
-
-  const sendMessage = async (content: string) => {
-    try {
-      const session = userSession ?? window.localStorage.getItem("user_session");
-      if (!session) {
-        setHistory((prev) => [...prev, `[SYSTEM] Missing session. Reboot terminal.`]);
-        return;
-      }
-
-      const res = await fetch("/api/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_session: session, content }),
-      });
-
-      if (!res.ok) {
-        setHistory((prev) => [...prev, `[SYSTEM] Transmission failed. Try again.`]);
-        return;
-      }
-
-      setHistory((prev) => [...prev, `[SYSTEM] Message sent successfully. ID: ${crypto.randomUUID().slice(0, 8)}`]);
-    } catch {
-      setHistory((prev) => [...prev, `[SYSTEM] Network fault. Retry.`]);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!command.trim()) return;
-
-    const outgoing = command.trim();
-    setCommand("");
-
-    // Handle logout/exit
-    if (adminKey && outgoing === "exit") {
-      setAdminKey(null);
-      setAdminStep("idle");
-      onCollapse();
-      return;
-    }
-
-    if (adminKey) {
-      // Admin sending command/message logic (if any specific CLI commands needed)
-      // For now, just echo
-      setHistory((prev) => [...prev, `> ${outgoing}`, `[SYSTEM] Root terminal active. Type "exit" to logout.`]);
-      return;
-    }
-
-    if (adminStep === "idle") {
-      const normalized = outgoing.toLowerCase();
-      
-      // Admin login trigger
-      if (normalized === "admin" || normalized === "sudo login" || normalized === "admin --access") {
-        setHistory((prev) => [...prev, `> ${outgoing}`, `[SYSTEM] Enter Admin Password:`]);
-        setAdminStep("awaiting_password");
-        return;
-      }
-      
-      // Regular user sending message -> Trigger verification
-      setPendingMessage(outgoing);
+    // Check for public message vs command
+    if (mode === 'public' && !cmd.startsWith('sudo') && !cmd.startsWith('clear')) {
+      // Treat as message attempt
       setShowVerification(true);
       return;
     }
 
-    if (adminStep === "awaiting_password") {
-      setHistory((prev) => [...prev, `> ${"*".repeat(Math.min(outgoing.length, 24))}`, `[SYSTEM] Verifying credentials...`]);
+    // Process as command
+    await processCommand(cmd);
+  };
 
-      // Hardcoded password check as per requirement
-      if (outgoing === "23112311") {
-        setHistory((prev) => [...prev, `[SYSTEM] ACCESS GRANTED. WELCOME ADMINISTRATOR.`]);
-        setAdminKey(outgoing); // Use password as key for now, or fetch real key if needed
-        setAdminStep("idle");
-        onExpand?.();
+  const handleVerificationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userDetails.name || !userDetails.email) return;
+
+    setShowVerification(false);
+    setIsTransmitting(true);
+    
+    // Simulate transmission
+    await new Promise(r => setTimeout(r, 1500));
+    
+    // Send to API
+    try {
+      const contentPayload = JSON.stringify({
+        text: inputBuffer || "Message via Terminal", // Use buffer or default
+        name: userDetails.name,
+        email: userDetails.email,
+        timestamp: new Date().toISOString()
+      });
+
+      const session = window.localStorage.getItem("user_session") || crypto.randomUUID();
+      window.localStorage.setItem("user_session", session);
+
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_session: session, content: contentPayload }),
+      });
+
+      if (res.ok) {
+        setReceiptData({
+          id: crypto.randomUUID().slice(0, 8).toUpperCase(),
+          timestamp: new Date().toLocaleTimeString(),
+          name: userDetails.name,
+          status: "SENT TO SECURE VAULT"
+        });
+        setView('receipt');
+        addToHistory(`> Message transmitted successfully.`);
       } else {
-        setHistory((prev) => [...prev, `[SYSTEM] ACCESS DENIED. INCORRECT PASSWORD.`]);
-        setAdminStep("idle");
+        addToHistory(`> Transmission failed.`);
       }
-      return;
+    } catch {
+      addToHistory(`> Network error.`);
+    } finally {
+      setIsTransmitting(false);
+      setInputBuffer("");
     }
   };
 
-  return (
-    <div className="relative">
-      <AnimatePresence>
-        {isExpanded && adminKey ? (
-          typeof document !== "undefined" && createPortal(
-            <motion.div
-              key="terminal-expanded"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[9999]"
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputBuffer === "23112311") {
+      setMode('admin');
+      setView('dashboard');
+      setInputBuffer("");
+      addToHistory("> Access Granted. Welcome Administrator.");
+    } else {
+      addToHistory("> Access Denied.");
+      setView('input');
+      setInputBuffer("");
+    }
+  };
+
+  // --- RENDERERS ---
+
+  const renderReceipt = () => (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="p-4 border border-cyber-cyan/50 rounded bg-cyber-cyan/5 font-mono text-xs text-cyber-cyan relative overflow-hidden"
+    >
+      <div className="absolute top-0 left-0 w-full h-1 bg-cyber-cyan/30 animate-scanline" />
+      <div className="flex justify-between border-b border-cyber-cyan/30 pb-2 mb-2">
+        <span>DIGITAL RECEIPT</span>
+        <span>[ENCRYPTED]</span>
+      </div>
+      <div className="space-y-1">
+        <div className="flex justify-between">
+          <span className="opacity-70">TICKET ID:</span>
+          <span>{receiptData?.id}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="opacity-70">TIMESTAMP:</span>
+          <span>{receiptData?.timestamp}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="opacity-70">SENDER:</span>
+          <span>{receiptData?.name}</span>
+        </div>
+        <div className="mt-4 pt-2 border-t border-cyber-cyan/30 text-center font-bold animate-pulse">
+          STATUS: {receiptData?.status}
+        </div>
+      </div>
+      <button 
+        onClick={() => setView('input')}
+        className="mt-4 w-full py-1 border border-cyber-cyan/30 hover:bg-cyber-cyan/20 transition-colors text-center"
+      >
+        CLOSE RECEIPT
+      </button>
+    </motion.div>
+  );
+
+  const renderAdminDashboard = () => (
+    <div className="flex flex-col h-full text-amber-500 font-mono text-xs">
+      {/* Header */}
+      <div className="flex items-center justify-between p-2 border-b border-amber-500/30 bg-amber-900/10">
+        <div className="flex gap-4">
+          <span>TOTAL: {stats.total}</span>
+          <span>UNREAD: {stats.unread}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span>DB: CONNECTED</span>
+        </div>
+      </div>
+
+      {/* Split View */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar */}
+        <div className="w-1/3 border-r border-amber-500/30 overflow-y-auto bg-black/40">
+          {messages.map(msg => (
+            <button
+              key={msg.id}
+              onClick={() => setSelectedMessage(msg)}
+              className={`w-full text-left p-3 border-b border-amber-500/10 hover:bg-amber-500/10 transition-colors ${selectedMessage?.id === msg.id ? 'bg-amber-500/20' : ''}`}
             >
-              <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                transition={{ duration: 0.4, type: "spring", bounce: 0.25 }}
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(95vw,1200px)] h-[min(90vh,900px)] rounded-xl overflow-hidden border border-amber-400/50 bg-black/95 shadow-[0_0_50px_rgba(251,191,36,0.2)]"
-              >
-                <div className="bg-black/90 px-4 py-3 border-b border-amber-400/30 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <TerminalIcon className="w-5 h-5 text-amber-400" />
-                    <span className="text-sm font-mono font-bold text-amber-400 tracking-wider">ROOT ACCESS // SYSTEM OVERRIDE</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={onCollapse}
-                    aria-label="Close Terminal"
-                    className="p-2 rounded hover:bg-amber-400/10 transition-colors"
+              <div className="flex justify-between mb-1">
+                <span className="font-bold truncate">{msg.sender_name || "Unknown"}</span>
+                {!msg.is_read && <span className="text-[10px] bg-amber-500 text-black px-1 rounded">NEW</span>}
+              </div>
+              <div className="opacity-60 truncate text-[10px]">{msg.content}</div>
+            </button>
+          ))}
+        </div>
+
+        {/* Main Panel */}
+        <div className="w-2/3 p-4 overflow-y-auto bg-black/20">
+          {selectedMessage ? (
+            <div className="border border-amber-500/30 p-4 rounded relative">
+              <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-amber-500" />
+              <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-amber-500" />
+              <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-amber-500" />
+              <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-amber-500" />
+              
+              <h3 className="text-lg font-bold mb-4 border-b border-amber-500/30 pb-2">MESSAGE DECRYPTED</h3>
+              <div className="grid grid-cols-[100px_1fr] gap-2 mb-4">
+                <span className="opacity-60">FROM:</span>
+                <span>{selectedMessage.sender_name} &lt;{selectedMessage.sender_email}&gt;</span>
+                
+                <span className="opacity-60">SENT:</span>
+                <span>{new Date(selectedMessage.created_at).toLocaleString()}</span>
+                
+                <span className="opacity-60">ID:</span>
+                <span>{selectedMessage.id}</span>
+              </div>
+              <div className="p-3 border border-amber-500/20 bg-black/40 rounded min-h-[100px] whitespace-pre-wrap">
+                {selectedMessage.content}
+              </div>
+              
+              <div className="mt-4 flex justify-end gap-2">
+                <button 
+                  onClick={() => {/* Implement reply logic */}}
+                  className="px-3 py-1 border border-amber-500/30 hover:bg-amber-500/20"
+                >
+                  REPLY
+                </button>
+                <button 
+                  onClick={() => {/* Implement delete logic */}}
+                  className="px-3 py-1 border border-red-500/30 text-red-400 hover:bg-red-500/10"
+                >
+                  DELETE
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center opacity-40">
+              SELECT A MESSAGE TO DECRYPT
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Footer / Command Line */}
+      <div className="p-2 border-t border-amber-500/30 bg-black/60 flex gap-2">
+        <span>admin@root:~$</span>
+        <input 
+          value={inputBuffer}
+          onChange={(e) => setInputBuffer(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && processCommand(inputBuffer)}
+          className="flex-1 bg-transparent border-none outline-none text-amber-500"
+          placeholder="Type 'help' for commands..."
+          autoFocus
+        />
+      </div>
+    </div>
+  );
+
+  // --- MAIN RENDER ---
+
+  const themeColor = mode === 'admin' ? 'text-amber-500 border-amber-500' : 'text-cyber-cyan border-cyber-cyan';
+  const glowClass = mode === 'admin' ? 'shadow-[0_0_20px_rgba(245,158,11,0.2)]' : 'shadow-[0_0_20px_rgba(6,182,212,0.2)]';
+
+  if (view === 'dashboard' && mode === 'admin') {
+    return (
+      <div className={`w-full h-[600px] bg-black/90 rounded-lg border border-amber-500 overflow-hidden relative ${glowClass}`}>
+        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-10 bg-[length:100%_2px,3px_100%]" />
+        {renderAdminDashboard()}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`w-full h-[400px] bg-black/90 rounded-lg border ${themeColor} overflow-hidden relative flex flex-col ${glowClass}`}>
+      {/* Scanlines Effect */}
+      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-10 bg-[length:100%_2px,3px_100%]" />
+      
+      {/* Header */}
+      <div className={`flex justify-between items-center p-2 border-b ${mode === 'admin' ? 'border-amber-500/30 bg-amber-900/10' : 'border-cyber-cyan/30 bg-cyber-cyan/10'}`}>
+        <div className="flex items-center gap-2">
+          <TerminalIcon className="w-4 h-4" />
+          <span className="font-mono text-xs font-bold">{mode === 'admin' ? 'ROOT_ACCESS // ADMIN' : 'GUEST_ACCESS // PUBLIC'}</span>
+        </div>
+        <div className="flex gap-1">
+          <div className={`w-2 h-2 rounded-full ${mode === 'admin' ? 'bg-amber-500' : 'bg-cyber-cyan'} animate-pulse`} />
+          <div className={`w-2 h-2 rounded-full ${mode === 'admin' ? 'bg-amber-500' : 'bg-cyber-cyan'} opacity-50`} />
+          <div className={`w-2 h-2 rounded-full ${mode === 'admin' ? 'bg-amber-500' : 'bg-cyber-cyan'} opacity-25`} />
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="flex-1 p-4 font-mono text-xs overflow-y-auto relative" ref={scrollRef}>
+        {view === 'receipt' ? renderReceipt() : (
+          <div className="space-y-1">
+            {history.map((line, i) => (
+              <div key={i} className={line.startsWith('>') ? 'opacity-100 font-bold' : 'opacity-70'}>
+                {line}
+              </div>
+            ))}
+            
+            {isTransmitting && (
+              <div className="animate-pulse text-cyber-cyan">
+                &gt; TRANSMITTING DATA PACKETS...
+              </div>
+            )}
+
+            {/* Input Line */}
+            {!isTransmitting && (
+              <div className="flex gap-2 mt-2">
+                <span className="font-bold">&gt;</span>
+                <form onSubmit={view === 'login' ? handleLoginSubmit : handleSubmit} className="flex-1" autoComplete="off">
+                  <input
+                    type={view === 'login' ? 'password' : 'text'}
+                    value={inputBuffer}
+                    onChange={(e) => setInputBuffer(e.target.value)}
+                    className={`w-full bg-transparent border-none outline-none ${mode === 'admin' ? 'text-amber-500 placeholder-amber-800' : 'text-cyber-cyan placeholder-cyber-cyan/30'}`}
+                    placeholder={view === 'login' ? 'Enter Password' : "Type message or 'sudo login'..."}
+                    autoFocus
+                  />
+                </form>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Verification Modal Overlay */}
+      <AnimatePresence>
+        {showVerification && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-20 bg-black/90 backdrop-blur-sm flex items-center justify-center"
+          >
+            <div className={`w-3/4 max-w-sm border ${themeColor} bg-black p-4 shadow-[0_0_30px_rgba(0,0,0,0.8)]`}>
+              <div className={`text-center font-bold border-b ${mode === 'admin' ? 'border-amber-500/30' : 'border-cyber-cyan/30'} pb-2 mb-4`}>
+                IDENTITY VERIFICATION
+              </div>
+              <form onSubmit={handleVerificationSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] opacity-70 mb-1">CODENAME / NAME</label>
+                  <input
+                    required
+                    value={userDetails.name}
+                    onChange={e => setUserDetails({...userDetails, name: e.target.value})}
+                    className={`w-full bg-transparent border ${mode === 'admin' ? 'border-amber-500/50' : 'border-cyber-cyan/50'} p-1 outline-none`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] opacity-70 mb-1">SECURE UPLINK / EMAIL</label>
+                  <input
+                    required
+                    type="email"
+                    value={userDetails.email}
+                    onChange={e => setUserDetails({...userDetails, email: e.target.value})}
+                    className={`w-full bg-transparent border ${mode === 'admin' ? 'border-amber-500/50' : 'border-cyber-cyan/50'} p-1 outline-none`}
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowVerification(false)}
+                    className="flex-1 border border-red-500/50 text-red-500 hover:bg-red-900/20 py-1"
                   >
-                    <X className="w-5 h-5 text-amber-400" />
+                    ABORT
+                  </button>
+                  <button 
+                    type="submit"
+                    className={`flex-1 border ${mode === 'admin' ? 'border-amber-500' : 'border-cyber-cyan'} hover:bg-white/10 py-1 font-bold`}
+                  >
+                    TRANSMIT
                   </button>
                 </div>
-                <div className="p-0 h-[calc(100%-53px)]">
-                  <AdminConsole adminKey={adminKey} />
-                </div>
-              </motion.div>
-            </motion.div>,
-            document.body
-          )
-        ) : (
-          <motion.div
-            key="terminal-collapsed"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.3 }}
-            className={
-              "relative z-10 w-full lg:w-[400px] h-[300px] rounded-lg overflow-hidden border shadow-[0_0_18px_rgba(0,0,0,0.35)] " +
-              (adminKey ? "border-amber-400/35" : "border-cyber-blue/30")
-            }
-          >
-            <div
-              className={
-                "px-3 py-2 flex items-center justify-between border-b " +
-                (adminKey ? "bg-black/85 border-amber-400/20" : "bg-black/85 border-white/10")
-              }
-            >
-              <div className="flex items-center gap-2">
-                <TerminalIcon className={"w-4 h-4 " + (adminKey ? "text-amber-300" : "text-gray-400")} />
-                <span className={"text-xs font-mono " + (adminKey ? "text-amber-300" : "text-gray-400")}>
-                  {adminKey ? "Root@Admin" : "Guest@Jabriel"}
-                </span>
-              </div>
-              {adminKey ? (
-                <button
-                  type="button"
-                  onClick={onExpand}
-                  aria-label="Expand Terminal"
-                  className="text-[10px] font-mono px-2 py-1 rounded border border-amber-400/30 text-amber-300 hover:bg-amber-500/10"
-                >
-                  OPEN
-                </button>
-              ) : null}
-            </div>
-
-            <div ref={collapsedRef} className="p-3 h-[calc(300px-40px)] bg-black/80 font-mono text-xs flex flex-col">
-              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-                {history.length === 0 ? (
-                  <div className="text-gray-600">Type message or run secret command.</div>
-                ) : (
-                  history.slice(-maxLines).map((line, i) => (
-                    <div
-                      key={i}
-                      className={
-                        line.startsWith(">") ? "text-gray-200" : adminKey ? "text-amber-200" : "text-cyber-blue"
-                      }
-                    >
-                      {line}
-                    </div>
-                  ))
-                )}
-              </div>
-              <form onSubmit={handleSubmit} className="mt-2 flex items-center gap-2">
-                <span className={adminKey ? "text-amber-300" : "text-cyber-cyan"}>{`>`}</span>
-                <input
-                  type={adminStep === "awaiting_password" ? "password" : "text"}
-                  value={command}
-                  onChange={(e) => setCommand(e.target.value)}
-                  className="flex-1 bg-transparent border-none outline-none text-gray-200 placeholder-gray-600"
-                  placeholder={adminStep === "awaiting_password" ? "Enter Password..." : "Enter command..."}
-                />
-                <button
-                  type="submit"
-                  aria-label="Send Command"
-                  className={adminKey ? "text-amber-300 hover:text-amber-200" : "text-cyber-blue hover:text-white"}
-                >
-                  <Send className="w-4 h-4" />
-                </button>
               </form>
-
-              {/* Verification Modal for Regular Users */}
-              <AnimatePresence>
-                {showVerification && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 z-20 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
-                  >
-                    <div className="w-full max-w-sm border border-cyber-blue/30 bg-black/80 rounded p-4 shadow-[0_0_20px_rgba(59,130,246,0.2)]">
-                      <div className="text-cyber-blue font-mono text-xs mb-4 border-b border-cyber-blue/20 pb-2">
-                        IDENTITY VERIFICATION REQUIRED
-                      </div>
-                      <form onSubmit={handleVerificationSubmit} className="space-y-3">
-                        <div>
-                          <label className="block text-[10px] font-mono text-gray-400 mb-1">CODENAME / NAME</label>
-                          <input
-                            type="text"
-                            required
-                            value={userDetails.name}
-                            onChange={(e) => setUserDetails(prev => ({ ...prev, name: e.target.value }))}
-                            className="w-full bg-black/50 border border-cyber-blue/20 rounded px-2 py-1 text-xs text-white focus:border-cyber-blue/60 outline-none"
-                            placeholder="Enter your name"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-mono text-gray-400 mb-1">SECURE UPLINK / EMAIL</label>
-                          <input
-                            type="email"
-                            required
-                            value={userDetails.email}
-                            onChange={(e) => setUserDetails(prev => ({ ...prev, email: e.target.value }))}
-                            className="w-full bg-black/50 border border-cyber-blue/20 rounded px-2 py-1 text-xs text-white focus:border-cyber-blue/60 outline-none"
-                            placeholder="name@example.com"
-                          />
-                        </div>
-                        <div className="flex gap-2 pt-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowVerification(false);
-                              setPendingMessage("");
-                            }}
-                            className="flex-1 py-1 rounded border border-red-500/30 text-red-400 text-xs hover:bg-red-500/10"
-                          >
-                            ABORT
-                          </button>
-                          <button
-                            type="submit"
-                            className="flex-1 py-1 rounded bg-cyber-blue/20 border border-cyber-blue/50 text-cyber-blue text-xs hover:bg-cyber-blue/30"
-                          >
-                            TRANSMIT
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           </motion.div>
         )}
@@ -395,4 +374,3 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
     </div>
   );
 }
-

@@ -73,16 +73,12 @@ export default function OperationalBase() {
             <div className="absolute inset-0 z-10 pointer-events-none bg-[linear-gradient(rgba(59,130,246,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.1)_1px,transparent_1px)] bg-[size:50px_50px] opacity-20" />
           </div>
 
-          <div className="w-full lg:w-[400px] flex-shrink-0">
-            <PanelErrorBoundary
-              fallback={
-                <div className="w-full h-[400px] lg:h-[500px] rounded-lg border border-white/10 bg-black/70 flex items-center justify-center">
-                  <div className="font-mono text-xs text-gray-500">Terminal offline.</div>
-                </div>
-              }
-            >
-              <Terminal isExpanded={isExpanded} onExpand={() => setIsExpanded(true)} onCollapse={() => setIsExpanded(false)} />
-            </PanelErrorBoundary>
+          <div className="w-full lg:w-[400px] flex-shrink-0 flex items-center justify-center border border-white/10 rounded-lg bg-black/40">
+            <div className="text-center p-8">
+              <div className="text-cyber-blue font-mono text-sm mb-2">SYSTEM STATUS</div>
+              <div className="text-green-500 font-bold text-xl tracking-widest">OPERATIONAL</div>
+              <div className="text-gray-500 text-xs mt-4">Terminal relocated to secure uplink sector.</div>
+            </div>
           </div>
         </motion.div>
       </div>

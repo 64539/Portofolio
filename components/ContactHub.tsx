@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Github, Instagram, Mail } from "lucide-react";
+import Terminal from "./Terminal";
 
 export default function ContactHub() {
   return (
@@ -60,11 +61,8 @@ export default function ContactHub() {
                 </div>
               </div>
 
-              <div className="glass-panel p-6 rounded-lg">
-                <div className="font-mono text-xs text-gray-500 mb-2">QUICK COMMAND</div>
-                <div className="font-mono text-sm text-gray-300">
-                  Terminal tersedia di section OPERATIONAL BASE untuk kirim pesan cepat.
-                </div>
+              <div className="glass-panel p-1 rounded-lg overflow-hidden min-h-[400px]">
+                <Terminal />
               </div>
             </motion.div>
           </div>
