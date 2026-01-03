@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Terminal as TerminalIcon } from "lucide-react";
+import { Terminal as TerminalIcon, ChevronUp, ChevronDown } from "lucide-react";
 import { useTerminalLogic } from "@/hooks/useTerminalLogic";
 
 export default function Terminal() {
@@ -30,6 +30,7 @@ export default function Terminal() {
   const [userDetails, setUserDetails] = useState({ name: "", email: "" });
   const [showVerification, setShowVerification] = useState(false);
   const [isTransmitting, setIsTransmitting] = useState(false);
+  const [isOutputExpanded, setIsOutputExpanded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll history
@@ -174,9 +175,9 @@ export default function Terminal() {
   );
 
   const renderAdminDashboard = () => (
-    <div className="flex flex-col h-full text-amber-500 font-mono text-xs">
+    <div className="flex flex-col h-full text-amber-500 font-mono text-xs relative">
       {/* Header */}
-      <div className="flex items-center justify-between p-2 border-b border-amber-500/30 bg-amber-900/10">
+      <div className="flex items-center justify-between p-2 border-b border-amber-500/30 bg-amber-900/10 flex-shrink-0">
         <div className="flex gap-4">
           <span>TOTAL: {stats.total}</span>
           <span>UNREAD: {stats.unread}</span>
@@ -253,22 +254,53 @@ export default function Terminal() {
         </div>
       </div>
       
-      {/* Footer / Command Line */}
-      <div className="p-2 border-t border-amber-500/30 bg-black/60 flex gap-2">
-        <span>admin@root:~$</span>
-        <input 
-          value={inputBuffer}
-          onChange={(e) => setInputBuffer(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              processCommand(inputBuffer);
-            }
-          }}
-          className="flex-1 bg-transparent border-none outline-none text-amber-500"
-          placeholder="Type 'help' for commands..."
-          autoFocus
-        />
-      </div>
+      {/* Expandable Command Output Area */}
+      <motion.div 
+        initial={{ height: "40px" }}
+        animate={{ height: isOutputExpanded ? "200px" : "40px" }}
+        className="border-t border-amber-500/30 bg-black/90 flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out"
+      >
+        <div className="flex items-center justify-between px-2 bg-amber-900/20 h-[40px]">
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-amber-500">admin@root:~$</span>
+            <input 
+              value={inputBuffer}
+              onChange={(e) => setInputBuffer(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  processCommand(inputBuffer);
+                  setIsOutputExpanded(true); // Auto expand on command
+                } else {
+                  handleKeyDown(e);
+                }
+              }}
+              className="flex-1 bg-transparent border-none outline-none text-amber-500 w-full"
+              placeholder="Type 'help' for commands..."
+              autoFocus
+            />
+          </div>
+          <button 
+            onClick={() => setIsOutputExpanded(!isOutputExpanded)}
+            className="p-1 hover:bg-amber-500/20 rounded text-amber-500"
+          >
+            {isOutputExpanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+          </button>
+        </div>
+        
+        {/* Output Scroll Area */}
+        <div className="flex-1 overflow-y-auto p-2 font-mono text-[11px] space-y-1 bg-black/50 border-t border-amber-500/10" ref={scrollRef}>
+          {history.map((line, i) => (
+            <div key={i} className={`${line.startsWith('>') ? 'text-amber-300 font-bold' : 'text-amber-500/70'}`}>
+              {line}
+            </div>
+          ))}
+          {isProcessing && (
+             <div className="animate-pulse text-amber-500">
+               &gt; PROCESSING COMMAND...
+             </div>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 

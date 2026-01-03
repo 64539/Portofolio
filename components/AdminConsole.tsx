@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { Send, Trash2, Reply, Search, User, Mail, Clock, RefreshCw } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { createSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { Send, Trash2, Reply, Search, User, Mail, Clock, RefreshCw, Terminal, ChevronUp, ChevronDown } from "lucide-react";
 
 type MessageRow = {
   id: string;
@@ -22,6 +23,7 @@ export default function AdminConsole({ adminKey }: { adminKey: string }) {
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isOutputExpanded, setIsOutputExpanded] = useState(false);
 
   // Fetch all messages (simulated "Gmail" view where we see all incoming items)
   // Note: The original API might be session-based. We'll try to fetch all if API supports it,

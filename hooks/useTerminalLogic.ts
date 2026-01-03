@@ -118,12 +118,23 @@ export const useTerminalLogic = () => {
         setHistory([]);
       } else if (command === 'help') {
         addToHistory('Available commands:');
+        addToHistory('----------------');
         COMMANDS.forEach(c => addToHistory(`  - ${c}`));
+        addToHistory('----------------');
       } else {
         addToHistory(`> ${cmd}`);
         addToHistory(`Command not found: ${command}. Type 'help' for available commands.`);
       }
     } else if (mode === 'admin') {
+      // SECURITY CHECK: Ensure admin key is present
+      if (!adminKey) {
+        setMode('public');
+        setView('input');
+        addToHistory('SESSION EXPIRED: Authorization token missing.');
+        setIsProcessing(false);
+        return;
+      }
+
       switch (command) {
         case 'inbox':
           await fetchMessages();
