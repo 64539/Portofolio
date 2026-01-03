@@ -21,7 +21,9 @@ export default function Terminal() {
     setSelectedMessage,
     stats,
     receiptData,
-    setReceiptData
+    setReceiptData,
+    navigateHistory,
+    suggestions
   } = useTerminalLogic();
 
   const [userDetails, setUserDetails] = useState({ name: "", email: "" });
@@ -35,6 +37,21 @@ export default function Terminal() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [history]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      navigateHistory('up');
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      navigateHistory('down');
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      if (suggestions.length > 0) {
+        setInputBuffer(suggestions[0]);
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,18 +317,27 @@ export default function Terminal() {
 
             {/* Input Line */}
             {!isTransmitting && (
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-2 mt-2 relative">
                 <span className="font-bold">&gt;</span>
                 <form onSubmit={view === 'login' ? handleLoginSubmit : handleSubmit} className="flex-1" autoComplete="off">
                   <input
                     type={view === 'login' ? 'password' : 'text'}
                     value={inputBuffer}
                     onChange={(e) => setInputBuffer(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     className={`w-full bg-transparent border-none outline-none ${mode === 'admin' ? 'text-amber-500 placeholder-amber-800' : 'text-cyber-cyan placeholder-cyber-cyan/30'}`}
                     placeholder={view === 'login' ? 'Enter Password' : "Type message or 'sudo login'..."}
                     autoFocus
                   />
                 </form>
+                {/* Autocomplete Suggestions */}
+                {suggestions.length > 0 && inputBuffer && view !== 'login' && (
+                  <div className={`absolute left-4 bottom-full mb-1 border ${mode === 'admin' ? 'border-amber-500 bg-black' : 'border-cyber-cyan bg-black'} p-1`}>
+                    {suggestions.map(s => (
+                      <div key={s} className="opacity-70 px-1">{s}</div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
