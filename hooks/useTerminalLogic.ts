@@ -130,7 +130,8 @@ export const useTerminalLogic = () => {
       if (!adminKey) {
         setMode('public');
         setView('input');
-        addToHistory('SESSION EXPIRED: Authorization token missing.');
+        addToHistory('SESSION EXPIRED: Authorization token missing or invalid.');
+        addToHistory('Please run "sudo login" to re-authenticate.');
         setIsProcessing(false);
         return;
       }

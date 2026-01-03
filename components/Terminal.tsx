@@ -24,7 +24,8 @@ export default function Terminal() {
     setReceiptData,
     navigateHistory,
     suggestions,
-    isProcessing
+    isProcessing,
+    setAdminKey
   } = useTerminalLogic();
 
   const [userDetails, setUserDetails] = useState({ name: "", email: "" });
@@ -124,6 +125,7 @@ export default function Terminal() {
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputBuffer === "23112311") {
+      setAdminKey("23112311"); // Set auth token immediately
       setMode('admin');
       setView('dashboard');
       setInputBuffer("");
@@ -341,7 +343,11 @@ export default function Terminal() {
         {view === 'receipt' ? renderReceipt() : (
           <div className="space-y-1">
             {history.map((line, i) => (
-              <div key={i} className={line.startsWith('>') ? 'opacity-100 font-bold' : 'opacity-70'}>
+              <div key={i} className={`
+                ${line.startsWith('>') ? 'opacity-100 font-bold' : 'opacity-70'}
+                ${line.includes('Access Granted') ? 'text-green-500 font-bold animate-pulse' : ''}
+                ${line.includes('Access Denied') || line.includes('EXPIRED') ? 'text-red-500 font-bold' : ''}
+              `}>
                 {line}
               </div>
             ))}
