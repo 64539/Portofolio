@@ -1,11 +1,90 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Terminal as TerminalIcon, ChevronUp, ChevronDown } from "lucide-react";
-import { useTerminalLogic } from "@/hooks/useTerminalLogic";
+import { useTerminalLogic, Message } from "@/hooks/useTerminalLogic";
+
+// Separate component for clean detail view
+const MessageDetailView = ({ message, onReply, onDelete }: { message: Message, onReply: () => void, onDelete: () => void }) => {
+  // Parse content if it's JSON string
+  const parsedContent = useMemo(() => {
+    try {
+      const obj = JSON.parse(message.content);
+      return obj.message || obj.text || message.content;
+    } catch {
+      return message.content;
+    }
+  }, [message.content]);
+
+  const timestamp = new Date(message.created_at).toLocaleString('en-GB', { 
+    day: '2-digit', month: '2-digit', year: 'numeric', 
+    hour: '2-digit', minute: '2-digit' 
+  });
+
+  return (
+    <div className="border border-amber-500/30 p-6 rounded relative bg-black/40 h-full flex flex-col">
+      {/* Decorative corners */}
+      <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-amber-500" />
+      <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-amber-500" />
+      <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-amber-500" />
+      <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-amber-500" />
+      
+      {/* Header */}
+      <div className="border-b border-amber-500/20 pb-4 mb-4 flex justify-between items-start">
+        <div>
+           <h2 className="text-xl font-bold text-amber-500 tracking-wider">DECRYPTED MESSAGE</h2>
+           <div className="text-xs text-amber-500/40 mt-1 font-mono">SECURE UPLINK #{message.index}</div>
+        </div>
+        <div className={`px-3 py-1 text-[10px] font-bold border rounded tracking-widest ${message.is_read ? 'border-amber-900/50 text-amber-700' : 'border-green-500 text-green-500 animate-pulse'}`}>
+          {message.is_read ? 'ARCHIVED' : 'INCOMING'}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 space-y-4 font-mono text-sm overflow-y-auto pr-2">
+        <div className="grid grid-cols-[100px_1fr] gap-2 items-baseline">
+          <span className="text-amber-500/50 text-xs">[SENDER]</span>
+          <span className="text-amber-100 font-bold">{message.sender_name || "Unknown"}</span>
+        </div>
+        <div className="grid grid-cols-[100px_1fr] gap-2 items-baseline">
+          <span className="text-amber-500/50 text-xs">[CONTACT]</span>
+          <span className="text-amber-200">{message.sender_email || "N/A"}</span>
+        </div>
+        <div className="grid grid-cols-[100px_1fr] gap-2 items-baseline">
+          <span className="text-amber-500/50 text-xs">[TIMESTAMP]</span>
+          <span className="text-amber-500/70">{timestamp}</span>
+        </div>
+        
+        <div className="mt-6">
+          <div className="text-amber-500/50 text-xs mb-2">[MESSAGE]</div>
+          <div className="p-4 bg-amber-950/20 border border-amber-500/10 rounded text-amber-50 whitespace-pre-wrap leading-relaxed shadow-inner">
+            {parsedContent}
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="mt-6 pt-4 border-t border-amber-500/20 flex justify-end gap-3">
+        <button 
+          onClick={onReply}
+          className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500 hover:text-black border border-amber-500/50 text-amber-500 transition-all font-bold text-xs flex items-center gap-2 group"
+        >
+          <TerminalIcon size={14} className="group-hover:animate-bounce" /> REPLY
+        </button>
+        <button 
+          onClick={onDelete}
+          className="px-4 py-2 bg-red-900/10 hover:bg-red-500 hover:text-white border border-red-500/50 text-red-400 transition-all font-bold text-xs group"
+        >
+          DELETE
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export default function Terminal() {
+
   const {
     mode,
     setMode,
@@ -95,12 +174,10 @@ export default function Terminal() {
       const timestamp = new Date().toISOString();
       
       const contentPayload = JSON.stringify({
-        id: messageId,
-        from: userDetails.name,
+        name: userDetails.name,
         email: userDetails.email,
-        timestamp: timestamp,
-        text: inputBuffer || "Message via Terminal",
-        status: "UNREAD"
+        message: inputBuffer, // Dynamic message from input
+        timestamp: timestamp
       });
 
       const session = window.localStorage.getItem("user_session") || crypto.randomUUID();
@@ -195,15 +272,14 @@ export default function Terminal() {
 
   const handleReplyClick = () => {
     if (selectedMessage) {
-      setInputBuffer(`reply ${selectedMessage.id} `);
-      // Logic to focus input is handled by autoFocus prop and re-render
+      setInputBuffer(`reply ${selectedMessage.index} `);
     }
   };
 
   const handleDeleteClick = () => {
     if (selectedMessage) {
       if (confirm("DELETE MESSAGE: Are you sure? This action cannot be undone.")) {
-        processCommand(`delete ${selectedMessage.id}`);
+        processCommand(`delete ${selectedMessage.index}`);
       }
     }
   };
@@ -246,11 +322,16 @@ export default function Terminal() {
                 onClick={() => openMessage(msg)}
                 className={`w-full text-left p-3 border-b border-amber-500/10 hover:bg-amber-500/10 transition-colors ${selectedMessage?.id === msg.id ? 'bg-amber-500/20' : ''}`}
               >
-                <div className="flex justify-between mb-1">
-                  <span className="font-bold truncate">{msg.sender_name || "Unknown"}</span>
-                  {!msg.is_read && <span className="text-[10px] bg-amber-500 text-black px-1 rounded font-bold">NEW</span>}
+                <div className="flex justify-between items-start mb-1">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-sm truncate text-amber-500">
+                       <span className="opacity-50 mr-2 text-xs">#{msg.index}</span>
+                       {msg.sender_name || "Unknown"}
+                    </div>
+                    <div className="text-xs text-amber-500/50 truncate">{msg.sender_email || "No Email"}</div>
+                  </div>
+                  {!msg.is_read && <span className="text-[10px] bg-amber-500 text-black px-1 rounded font-bold ml-2">NEW</span>}
                 </div>
-                <div className="opacity-60 truncate text-[10px]">{msg.content}</div>
               </button>
             ))}
           </div>
@@ -259,52 +340,7 @@ export default function Terminal() {
         {/* Main Panel */}
         <div className="w-2/3 p-4 overflow-y-auto bg-black/20">
           {selectedMessage ? (
-            <div className="border border-amber-500/30 p-4 rounded relative bg-black/40">
-              <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-amber-500" />
-              <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-amber-500" />
-              <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-amber-500" />
-              <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-amber-500" />
-              
-              <div className="flex justify-between items-start border-b border-amber-500/30 pb-4 mb-4">
-                <div>
-                  <h3 className="text-lg font-bold text-amber-300">MESSAGE DECRYPTED</h3>
-                  <div className="text-[10px] opacity-60 mt-1 font-mono">ID: {selectedMessage.id}</div>
-                </div>
-                <div className={`px-2 py-1 rounded text-[10px] font-bold border ${selectedMessage.is_read ? 'border-amber-500/30 text-amber-500/50' : 'border-green-500 text-green-500'}`}>
-                  {selectedMessage.is_read ? 'STATUS: READ' : 'STATUS: UNREAD'}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[80px_1fr] gap-y-2 mb-6 text-xs">
-                <span className="opacity-60">FROM:</span>
-                <span className="font-bold text-amber-100">{selectedMessage.sender_name || "Anonymous"}</span>
-                
-                <span className="opacity-60">EMAIL:</span>
-                <span className="text-amber-200">{selectedMessage.sender_email || "N/A"}</span>
-                
-                <span className="opacity-60">SENT:</span>
-                <span>{new Date(selectedMessage.created_at).toLocaleString()}</span>
-              </div>
-
-              <div className="p-4 border border-amber-500/20 bg-black/60 rounded min-h-[150px] whitespace-pre-wrap text-sm leading-relaxed text-amber-100 shadow-inner">
-                {selectedMessage.content}
-              </div>
-              
-              <div className="mt-6 flex justify-end gap-3">
-                <button 
-                  onClick={handleReplyClick}
-                  className="px-4 py-2 border border-amber-500 hover:bg-amber-500 hover:text-black transition-all font-bold text-xs flex items-center gap-2"
-                >
-                  <TerminalIcon size={14} /> REPLY
-                </button>
-                <button 
-                  onClick={handleDeleteClick}
-                  className="px-4 py-2 border border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"
-                >
-                  DELETE
-                </button>
-              </div>
-            </div>
+            <MessageDetailView message={selectedMessage} onReply={handleReplyClick} onDelete={handleDeleteClick} />
           ) : (
             <div className="h-full flex flex-col items-center justify-center opacity-40">
               <TerminalIcon size={48} className="mb-4 opacity-50" />

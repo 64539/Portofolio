@@ -13,6 +13,7 @@ export type Message = {
   sender_name?: string;
   sender_email?: string;
   is_read?: boolean;
+  index?: number; // Added index property
 };
 
 export const useTerminalLogic = () => {
@@ -88,7 +89,10 @@ export const useTerminalLogic = () => {
       .order('created_at', { ascending: false });
     
     if (data) {
-      setMessages(data);
+      // Assign numeric index (1-based, newest first or oldest first? usually lists are 1..N)
+      // Let's use simple index based on current sort (Newest = 1)
+      const indexedData = data.map((m, i) => ({ ...m, index: i + 1 }));
+      setMessages(indexedData);
       setStats({
         total: data.length,
         unread: data.filter(m => !m.is_read).length
@@ -174,21 +178,38 @@ export const useTerminalLogic = () => {
           break;
         case 'read':
           if (args[1]) {
-            const msg = messages.find(m => m.id.startsWith(args[1]) || m.id === args[1]);
+            // Find by index first, then fallback to ID check for backward compatibility
+            const index = parseInt(args[1]);
+            let msg;
+            if (!isNaN(index)) {
+              msg = messages.find(m => m.index === index);
+            } else {
+              msg = messages.find(m => m.id.startsWith(args[1]) || m.id === args[1]);
+            }
+
             if (msg) {
-              setSelectedMessage(msg);
-              addToHistory(`> read: Opened message ${msg.id.slice(0, 8)}...`);
+              void openMessage(msg); // Use openMessage to trigger read status update
+              addToHistory(`> read: Opened message #${msg.index} (ID: ${msg.id.slice(0, 8)}...)`);
             } else {
               addToHistory(`Message ${args[1]} not found.`);
             }
           } else {
-             addToHistory('Usage: read <id>');
+             addToHistory('Usage: read <index|id>');
           }
           break;
         case 'delete':
           if (args[1]) {
+             // Find by index first, then ID
+             const index = parseInt(args[1]);
+             let msgId = args[1];
+             
+             if (!isNaN(index)) {
+               const found = messages.find(m => m.index === index);
+               if (found) msgId = found.id;
+             }
+
              if (confirm(`Delete message ${args[1]}?`)) {
-               const res = await fetch(`/api/admin/messages?id=${args[1]}`, {
+               const res = await fetch(`/api/admin/messages?id=${msgId}`, {
                  method: 'DELETE',
                  headers: { 'x-admin-key': adminKey }
                });
@@ -201,7 +222,7 @@ export const useTerminalLogic = () => {
                }
              }
           } else {
-            addToHistory('Usage: delete <id>');
+            addToHistory('Usage: delete <index|id>');
           }
           break;
         case 'clear':
