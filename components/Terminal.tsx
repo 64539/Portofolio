@@ -116,12 +116,16 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
     const outgoing = command.trim();
     setCommand("");
 
+    // Handle logout/exit
+    if (adminKey && outgoing === "exit") {
+      setAdminKey(null);
+      setAdminStep("idle");
+      onCollapse();
+      return;
+    }
+
     if (adminKey) {
-      if (outgoing === "exit") {
-        onCollapse();
-      } else {
-        setHistory((prev) => [...prev, `> ${outgoing}`, `[SYSTEM] Root terminal active. Type "exit" to minimize.`]);
-      }
+      setHistory((prev) => [...prev, `> ${outgoing}`, `[SYSTEM] Root terminal active. Type "exit" to logout.`]);
       return;
     }
 
@@ -147,7 +151,11 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
         setHistory((prev) => [...prev, `[SYSTEM] ROOT_ACCESS_GRANTED`]);
         setAdminKey(outgoing);
         setAdminStep("idle");
-        onExpand?.();
+        
+        // Ensure state update propagates before expansion
+        setTimeout(() => {
+          onExpand?.();
+        }, 100);
       } else {
         setHistory((prev) => [...prev, `[SYSTEM] ACCESS_DENIED`]);
         setAdminStep("idle");

@@ -10,7 +10,6 @@ const shadowUrl = "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png
 
 export default function MapComponent() {
   const basePosition: [number, number] = [-6.1115, 106.8926];
-  const schoolPosition: [number, number] = [-6.1098, 106.8912];
 
   const customIcon = useMemo(
     () =>
@@ -56,23 +55,6 @@ export default function MapComponent() {
         pathOptions={{ fillColor: "#3b82f6", color: "#3b82f6", fillOpacity: 0.12, opacity: 0.4 }}
         radius={1000}
         className="animate-pulse-slow"
-      />
-
-      <Marker position={schoolPosition} icon={customIcon}>
-        <Popup className="glass-popup">
-          <div className="font-mono text-sm">
-            <strong className="text-cyber-cyan">CORE EDUCATION SECTOR</strong>
-            <br />
-            SMKN 12 Jakarta (Kebon Bawang)
-          </div>
-        </Popup>
-      </Marker>
-
-      <Circle
-        center={schoolPosition}
-        pathOptions={{ fillColor: "#06b6d4", color: "#06b6d4", fillOpacity: 0.18, opacity: 0.9 }}
-        radius={420}
-        className="radar-pulse"
       />
     </MapContainer>
   );
