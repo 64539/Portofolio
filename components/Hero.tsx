@@ -2,17 +2,21 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
 import GlitchText from "./ui/GlitchText";
 import CyberButton from "./ui/CyberButton";
 import NeuralBackground from "./NeuralBackground";
 import { Shield, Cpu } from "lucide-react";
-import SystemDiagnosticModal from "./SystemDiagnosticModal";
+
+const SystemDiagnosticModal = dynamic(() => import("./SystemDiagnosticModal"), {
+  ssr: false,
+});
 
 export default function Hero() {
   const [diagnosticOpen, setDiagnosticOpen] = useState(false);
 
   return (
-    <section className="relative min-h-screen flex flex-col justify-center items-center overflow-hidden pt-20">
+    <section id="home" className="relative min-h-screen flex flex-col justify-center items-center overflow-hidden pt-20">
       <NeuralBackground />
 
       <SystemDiagnosticModal open={diagnosticOpen} onClose={() => setDiagnosticOpen(false)} />

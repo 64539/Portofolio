@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Syne, Fira_Code } from "next/font/google";
+import Navbar from "@/components/Navbar";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
@@ -26,6 +27,7 @@ export default function RootLayout({
         <div className="fixed inset-0 z-[-1] bg-grid opacity-20 pointer-events-none" />
         <div className="scanlines fixed inset-0 z-[50] pointer-events-none opacity-30" />
         
+        <Navbar />
         {children}
       </body>
     </html>

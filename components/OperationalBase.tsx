@@ -78,7 +78,7 @@ export default function OperationalBase() {
   );
 
   return (
-    <section className="py-20 relative z-10 mb-[30px]">
+    <section id="base" className="py-20 relative z-10 mb-[30px]">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0 }}

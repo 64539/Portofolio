@@ -207,6 +207,7 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
                 <button
                   type="button"
                   onClick={onCollapse}
+                  aria-label="Close Terminal"
                   className="p-2 rounded border border-amber-400/20 hover:border-amber-400/40"
                 >
                   <X className="w-4 h-4 text-amber-200" />
@@ -243,6 +244,7 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
                 <button
                   type="button"
                   onClick={onExpand}
+                  aria-label="Expand Terminal"
                   className="text-[10px] font-mono px-2 py-1 rounded border border-amber-400/30 text-amber-300 hover:bg-amber-500/10"
                 >
                   OPEN
@@ -278,6 +280,7 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
                 />
                 <button
                   type="submit"
+                  aria-label="Send Command"
                   className={adminKey ? "text-amber-300 hover:text-amber-200" : "text-cyber-blue hover:text-white"}
                 >
                   <Send className="w-4 h-4" />
