@@ -25,6 +25,7 @@ export const useTerminalLogic = () => {
   const [stats, setStats] = useState({ total: 0, unread: 0 });
   const [receiptData, setReceiptData] = useState<{ id: string; timestamp: string; name: string; status: string } | null>(null);
   const [adminKey, setAdminKey] = useState<string>('');
+  const [filter, setFilter] = useState<'ALL' | 'UNREAD' | 'READ'>('ALL');
 
   // Command History & Autocomplete
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -94,6 +95,36 @@ export const useTerminalLogic = () => {
       });
     }
   }, [supabase, adminKey]);
+
+  const filteredMessages = useMemo(() => {
+    if (filter === 'ALL') return messages;
+    if (filter === 'UNREAD') return messages.filter(m => !m.is_read);
+    if (filter === 'READ') return messages.filter(m => m.is_read);
+    return messages;
+  }, [messages, filter]);
+
+  const openMessage = async (msg: Message) => {
+    setSelectedMessage(msg);
+    if (!msg.is_read) {
+      // Optimistic update
+      setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, is_read: true } : m));
+      setStats(prev => ({ ...prev, unread: Math.max(0, prev.unread - 1) }));
+      
+      // API call
+      try {
+        await fetch('/api/admin/messages', {
+          method: 'PATCH',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-admin-key': adminKey 
+          },
+          body: JSON.stringify({ id: msg.id, is_read: true })
+        });
+      } catch (e) {
+        console.error("Failed to mark read", e);
+      }
+    }
+  };
 
   const processCommand = async (cmd: string) => {
     if (!cmd.trim()) return;
@@ -236,6 +267,10 @@ export const useTerminalLogic = () => {
     suggestions,
     setAdminKey,
     navigateHistory,
-    isProcessing
+    isProcessing,
+    filter,
+    setFilter,
+    filteredMessages,
+    openMessage
   };
 };

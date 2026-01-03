@@ -9,6 +9,8 @@ export async function POST(req: Request) {
     const body = (await req.json()) as {
       user_session?: string;
       content?: string;
+      sender_name?: string;
+      sender_email?: string;
     };
 
     const userSession = (body.user_session ?? "").trim();
@@ -18,7 +20,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "INVALID_PAYLOAD" }, { status: 400 });
     }
 
-    if (content.length > 2000) {
+    if (content.length > 5000) {
       return NextResponse.json({ error: "CONTENT_TOO_LONG" }, { status: 413 });
     }
 
@@ -26,7 +28,13 @@ export async function POST(req: Request) {
 
     const { data, error } = await supabase
       .from("messages")
-      .insert({ user_session: userSession, content, is_from_admin: false })
+      .insert({
+        user_session: userSession,
+        content,
+        is_from_admin: false,
+        sender_name: body.sender_name,
+        sender_email: body.sender_email,
+      })
       .select("id, created_at")
       .single();
 

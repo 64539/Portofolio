@@ -140,6 +140,37 @@ export async function DELETE(req: Request) {
   }
 }
 
+export async function PATCH(req: Request) {
+  try {
+    const expected = process.env.NEXT_PUBLIC_ADMIN_SECRET_KEY ?? process.env.ADMIN_SECRET_KEY ?? "";
+    const provided = (req.headers.get("x-admin-key") ?? "").trim();
+
+    if (!expected || !timingSafeEqual(provided, expected)) {
+      return NextResponse.json({ ok: false, error: "ACCESS_DENIED" }, { status: 401 });
+    }
+
+    const { id, is_read } = await req.json();
+
+    if (!id) {
+      return NextResponse.json({ ok: false, error: "MISSING_ID" }, { status: 400 });
+    }
+
+    const supabase = createSupabaseServerClient();
+    const { error } = await supabase
+      .from("messages")
+      .update({ is_read })
+      .eq("id", id);
+
+    if (error) {
+      return NextResponse.json({ ok: false, error: "DB_UPDATE_FAILED" }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ ok: false, error: "SERVER_ERROR" }, { status: 500 });
+  }
+}
+
 function timingSafeEqual(a: string, b: string) {
   if (a.length !== b.length) return false;
   let out = 0;
