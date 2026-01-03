@@ -30,6 +30,8 @@ export const useTerminalLogic = () => {
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyPointer, setHistoryPointer] = useState<number>(-1);
 
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const COMMANDS = useMemo(() => {
@@ -94,11 +96,18 @@ export const useTerminalLogic = () => {
   }, [supabase, adminKey]);
 
   const processCommand = async (cmd: string) => {
+    if (!cmd.trim()) return;
+    
     setCommandHistory(prev => [...prev, cmd]);
-    setHistoryPointer(-1); // Reset pointer
+    setHistoryPointer(-1);
+    setInputBuffer(""); // Clear input immediately
+    setIsProcessing(true);
 
     const args = cmd.trim().split(' ');
     const command = args[0].toLowerCase();
+
+    // Simulate processing delay for visual feedback
+    await new Promise(r => setTimeout(r, 300));
 
     if (mode === 'public') {
       if (command === 'sudo' && args[1] === 'login') {
@@ -163,13 +172,17 @@ export const useTerminalLogic = () => {
           break;
         case 'help':
           addToHistory('Admin Commands:');
+          addToHistory('----------------');
           COMMANDS.forEach(c => addToHistory(`  - ${c}`));
+          addToHistory('----------------');
           break;
         default:
           addToHistory(`> ${cmd}`);
           addToHistory('Unknown command.');
       }
     }
+    
+    setIsProcessing(false);
   };
 
   // Real-time subscription
@@ -210,6 +223,7 @@ export const useTerminalLogic = () => {
     commandHistory,
     suggestions,
     setAdminKey,
-    navigateHistory
+    navigateHistory,
+    isProcessing
   };
 };

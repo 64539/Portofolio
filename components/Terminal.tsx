@@ -23,7 +23,8 @@ export default function Terminal() {
     receiptData,
     setReceiptData,
     navigateHistory,
-    suggestions
+    suggestions,
+    isProcessing
   } = useTerminalLogic();
 
   const [userDetails, setUserDetails] = useState({ name: "", email: "" });
@@ -258,7 +259,11 @@ export default function Terminal() {
         <input 
           value={inputBuffer}
           onChange={(e) => setInputBuffer(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && processCommand(inputBuffer)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              processCommand(inputBuffer);
+            }
+          }}
           className="flex-1 bg-transparent border-none outline-none text-amber-500"
           placeholder="Type 'help' for commands..."
           autoFocus
@@ -315,8 +320,14 @@ export default function Terminal() {
               </div>
             )}
 
+            {isProcessing && (
+              <div className="animate-pulse text-amber-500">
+                &gt; PROCESSING COMMAND...
+              </div>
+            )}
+
             {/* Input Line */}
-            {!isTransmitting && (
+            {!isTransmitting && !isProcessing && (
               <div className="flex gap-2 mt-2 relative">
                 <span className="font-bold">&gt;</span>
                 <form onSubmit={view === 'login' ? handleLoginSubmit : handleSubmit} className="flex-1" autoComplete="off">
