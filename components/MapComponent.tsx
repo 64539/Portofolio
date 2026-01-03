@@ -74,8 +74,6 @@ export default function MapComponent() {
         radius={420}
         className="radar-pulse"
       />
-
-      <Circle center={schoolPosition} pathOptions={{ color: "#06b6d4", opacity: 0.5 }} radius={900} className="radar-ring" />
     </MapContainer>
   );
 }

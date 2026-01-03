@@ -68,37 +68,6 @@ export default function ContactHub() {
               </div>
             </motion.div>
           </div>
-
-          <div className="mt-10 flex items-center justify-center sm:justify-end gap-4">
-            <motion.a
-              href="https://github.com/64539"
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ scale: 1.06 }}
-              aria-label="GitHub Profile"
-              className="p-3 rounded-full bg-black/80 border border-cyber-blue/50 text-cyber-blue hover:bg-cyber-blue hover:text-black transition-colors shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-            >
-              <Github className="w-6 h-6" />
-            </motion.a>
-            <motion.a
-              href="https://www.instagram.com/codex24434?igsh=MTYxZXV6djR6c2NmMA=="
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ scale: 1.06 }}
-              aria-label="Instagram Profile"
-              className="p-3 rounded-full bg-black/80 border border-cyber-blue/30 text-white hover:bg-white hover:text-black transition-colors shadow-[0_0_15px_rgba(255,255,255,0.12)]"
-            >
-              <Instagram className="w-6 h-6" />
-            </motion.a>
-            <motion.a
-              href="mailto:jabrielsrizkiarjati2311@gmail.com"
-              whileHover={{ scale: 1.06 }}
-              aria-label="Send Email"
-              className="p-3 rounded-full bg-black/80 border border-cyber-cyan/50 text-cyber-cyan hover:bg-cyber-cyan hover:text-black transition-colors shadow-[0_0_15px_rgba(6,182,212,0.3)]"
-            >
-              <Mail className="w-6 h-6" />
-            </motion.a>
-          </div>
         </div>
       </div>
     </section>

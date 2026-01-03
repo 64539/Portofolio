@@ -33,7 +33,7 @@ class PanelErrorBoundary extends Component<{ fallback: ReactNode; children: Reac
 
 function RadarOverlay() {
   return (
-    <div className="absolute top-5 right-5 z-20 w-[200px] h-[200px] glass-panel rounded-lg overflow-hidden border border-cyber-blue/30">
+    <div className="absolute top-5 right-5 z-20 w-[200px] h-[200px] glass-panel rounded-lg overflow-hidden border border-cyber-blue/30 pointer-events-none">
       <div className="h-full bg-black/70 p-3 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-30" />
         <div className="relative h-full flex items-center justify-center">

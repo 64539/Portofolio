@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Send, Terminal as TerminalIcon, X } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -184,40 +185,43 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
 
   return (
     <div className="relative">
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {isExpanded && adminKey ? (
-          <motion.div
-            key="terminal-expanded"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1000]"
-          >
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-2xl backdrop-saturate-150" />
+          typeof document !== "undefined" && createPortal(
             <motion.div
-              layoutId="terminal"
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(92vw,1100px)] h-[min(88vh,820px)] rounded-xl overflow-hidden border border-amber-400/30 bg-black/85 shadow-[0_0_32px_rgba(251,191,36,0.10)]"
+              key="terminal-expanded"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[9999]"
             >
-              <div className="bg-black/85 px-3 py-2 border-b border-white/10 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <TerminalIcon className="w-4 h-4 text-amber-300" />
-                  <span className="text-xs font-mono text-amber-300">Root@Admin</span>
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+              <motion.div
+                layoutId="terminal"
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(95vw,1200px)] h-[min(90vh,900px)] rounded-xl overflow-hidden border border-amber-400/50 bg-black/95 shadow-[0_0_50px_rgba(251,191,36,0.2)]"
+              >
+                <div className="bg-black/90 px-4 py-3 border-b border-amber-400/30 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <TerminalIcon className="w-5 h-5 text-amber-400" />
+                    <span className="text-sm font-mono font-bold text-amber-400 tracking-wider">ROOT ACCESS // SYSTEM OVERRIDE</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onCollapse}
+                    aria-label="Close Terminal"
+                    className="p-2 rounded hover:bg-amber-400/10 transition-colors"
+                  >
+                    <X className="w-5 h-5 text-amber-400" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={onCollapse}
-                  aria-label="Close Terminal"
-                  className="p-2 rounded border border-amber-400/20 hover:border-amber-400/40"
-                >
-                  <X className="w-4 h-4 text-amber-200" />
-                </button>
-              </div>
-              <div className="p-3 sm:p-4 h-[calc(min(88vh,820px)-44px)]">
-                <AdminConsole adminKey={adminKey} />
-              </div>
-            </motion.div>
-          </motion.div>
+                <div className="p-0 h-[calc(100%-53px)]">
+                  <AdminConsole adminKey={adminKey} />
+                </div>
+              </motion.div>
+            </motion.div>,
+            document.body
+          )
         ) : (
           <motion.div
             key="terminal-collapsed"
