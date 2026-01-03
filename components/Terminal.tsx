@@ -151,11 +151,7 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
         setHistory((prev) => [...prev, `[SYSTEM] ROOT_ACCESS_GRANTED`]);
         setAdminKey(outgoing);
         setAdminStep("idle");
-        
-        // Ensure state update propagates before expansion
-        setTimeout(() => {
-          onExpand?.();
-        }, 100);
+        onExpand?.();
       } else {
         setHistory((prev) => [...prev, `[SYSTEM] ACCESS_DENIED`]);
         setAdminStep("idle");
@@ -193,7 +189,7 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
 
   return (
     <div className="relative">
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {isExpanded && adminKey ? (
           typeof document !== "undefined" && createPortal(
             <motion.div
@@ -205,8 +201,10 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
             >
               <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
               <motion.div
-                layoutId="terminal"
-                transition={{ duration: 0.3, ease: "easeInOut" }}
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ duration: 0.4, type: "spring", bounce: 0.25 }}
                 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(95vw,1200px)] h-[min(90vh,900px)] rounded-xl overflow-hidden border border-amber-400/50 bg-black/95 shadow-[0_0_50px_rgba(251,191,36,0.2)]"
               >
                 <div className="bg-black/90 px-4 py-3 border-b border-amber-400/30 flex items-center justify-between">
@@ -233,8 +231,10 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
         ) : (
           <motion.div
             key="terminal-collapsed"
-            layoutId="terminal"
-            transition={{ duration: 0.3, ease: "easeInOut" }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.3 }}
             className={
               "relative z-10 w-full lg:w-[400px] h-[300px] rounded-lg overflow-hidden border shadow-[0_0_18px_rgba(0,0,0,0.35)] " +
               (adminKey ? "border-amber-400/35" : "border-cyber-blue/30")
