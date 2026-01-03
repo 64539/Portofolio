@@ -16,8 +16,6 @@ type TerminalProps = {
 };
 
 export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalProps) {
-  const expectedAdminKey = process.env.NEXT_PUBLIC_ADMIN_SECRET_KEY;
-
   const [command, setCommand] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const [adminStep, setAdminStep] = useState<"idle" | "awaiting_password">("idle");
@@ -29,6 +27,10 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
     window.localStorage.setItem("user_session", next);
     return next;
   });
+
+  const [showVerification, setShowVerification] = useState(false);
+  const [pendingMessage, setPendingMessage] = useState("");
+  const [userDetails, setUserDetails] = useState({ name: "", email: "" });
 
   const typingTimerRef = useRef<number | null>(null);
   const typingIndexRef = useRef<number>(-1);
@@ -109,6 +111,57 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
     };
   }, []);
 
+  const handleVerificationSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userDetails.name || !userDetails.email) return;
+    
+    // Basic email validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userDetails.email)) {
+      setHistory((prev) => [...prev, `[SYSTEM] Invalid email format.`]);
+      return;
+    }
+
+    setShowVerification(false);
+    
+    // Construct JSON content
+    const contentPayload = JSON.stringify({
+      text: pendingMessage,
+      name: userDetails.name,
+      email: userDetails.email,
+      timestamp: new Date().toISOString()
+    });
+
+    setHistory((prev) => [...prev, `> ${pendingMessage}`, `[SYSTEM] Verifying identity... OK`, `[SYSTEM] Transmitting...`]);
+    
+    void sendMessage(contentPayload);
+    setPendingMessage("");
+  };
+
+  const sendMessage = async (content: string) => {
+    try {
+      const session = userSession ?? window.localStorage.getItem("user_session");
+      if (!session) {
+        setHistory((prev) => [...prev, `[SYSTEM] Missing session. Reboot terminal.`]);
+        return;
+      }
+
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_session: session, content }),
+      });
+
+      if (!res.ok) {
+        setHistory((prev) => [...prev, `[SYSTEM] Transmission failed. Try again.`]);
+        return;
+      }
+
+      setHistory((prev) => [...prev, `[SYSTEM] Message sent successfully. ID: ${crypto.randomUUID().slice(0, 8)}`]);
+    } catch {
+      setHistory((prev) => [...prev, `[SYSTEM] Network fault. Retry.`]);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!command.trim()) return;
@@ -125,66 +178,43 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
     }
 
     if (adminKey) {
+      // Admin sending command/message logic (if any specific CLI commands needed)
+      // For now, just echo
       setHistory((prev) => [...prev, `> ${outgoing}`, `[SYSTEM] Root terminal active. Type "exit" to logout.`]);
       return;
     }
 
     if (adminStep === "idle") {
       const normalized = outgoing.toLowerCase();
-      if (normalized === "sudo login" || normalized === "admin --access") {
-        setHistory((prev) => [...prev, `> ${outgoing}`, `[SYSTEM] Enter Secret Key:`]);
+      
+      // Admin login trigger
+      if (normalized === "admin" || normalized === "sudo login" || normalized === "admin --access") {
+        setHistory((prev) => [...prev, `> ${outgoing}`, `[SYSTEM] Enter Admin Password:`]);
         setAdminStep("awaiting_password");
         return;
       }
+      
+      // Regular user sending message -> Trigger verification
+      setPendingMessage(outgoing);
+      setShowVerification(true);
+      return;
     }
 
     if (adminStep === "awaiting_password") {
-      setHistory((prev) => [...prev, `> ${"*".repeat(Math.min(outgoing.length, 24))}`, `[SYSTEM] Verifying...`]);
+      setHistory((prev) => [...prev, `> ${"*".repeat(Math.min(outgoing.length, 24))}`, `[SYSTEM] Verifying credentials...`]);
 
-      if (!expectedAdminKey) {
-        setHistory((prev) => [...prev, `[SYSTEM] ADMIN_SECRET_UNDEFINED`]);
-        setAdminStep("idle");
-        return;
-      }
-
-      if (outgoing === expectedAdminKey) {
-        setHistory((prev) => [...prev, `[SYSTEM] ROOT_ACCESS_GRANTED`]);
-        setAdminKey(outgoing);
+      // Hardcoded password check as per requirement
+      if (outgoing === "23112311") {
+        setHistory((prev) => [...prev, `[SYSTEM] ACCESS GRANTED. WELCOME ADMINISTRATOR.`]);
+        setAdminKey(outgoing); // Use password as key for now, or fetch real key if needed
         setAdminStep("idle");
         onExpand?.();
       } else {
-        setHistory((prev) => [...prev, `[SYSTEM] ACCESS_DENIED`]);
+        setHistory((prev) => [...prev, `[SYSTEM] ACCESS DENIED. INCORRECT PASSWORD.`]);
         setAdminStep("idle");
       }
       return;
     }
-
-    setHistory((prev) => [...prev, `> ${outgoing}`, `[SYSTEM] Transmitting...`]);
-
-    void (async () => {
-      try {
-        const session = userSession ?? window.localStorage.getItem("user_session");
-        if (!session) {
-          setHistory((prev) => [...prev, `[SYSTEM] Missing session. Reboot terminal.`]);
-          return;
-        }
-
-        const res = await fetch("/api/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_session: session, content: outgoing }),
-        });
-
-        if (!res.ok) {
-          setHistory((prev) => [...prev, `[SYSTEM] Transmission failed. Try again.`]);
-          return;
-        }
-
-        setHistory((prev) => [...prev, `[SYSTEM] Delivered.`]);
-      } catch {
-        setHistory((prev) => [...prev, `[SYSTEM] Network fault. Retry.`]);
-      }
-    })();
   };
 
   return (
@@ -288,7 +318,7 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
                   value={command}
                   onChange={(e) => setCommand(e.target.value)}
                   className="flex-1 bg-transparent border-none outline-none text-gray-200 placeholder-gray-600"
-                  placeholder={adminStep === "awaiting_password" ? "Secret Key" : "Enter command..."}
+                  placeholder={adminStep === "awaiting_password" ? "Enter Password..." : "Enter command..."}
                 />
                 <button
                   type="submit"
@@ -298,6 +328,66 @@ export default function Terminal({ isExpanded, onCollapse, onExpand }: TerminalP
                   <Send className="w-4 h-4" />
                 </button>
               </form>
+
+              {/* Verification Modal for Regular Users */}
+              <AnimatePresence>
+                {showVerification && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-20 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+                  >
+                    <div className="w-full max-w-sm border border-cyber-blue/30 bg-black/80 rounded p-4 shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+                      <div className="text-cyber-blue font-mono text-xs mb-4 border-b border-cyber-blue/20 pb-2">
+                        IDENTITY VERIFICATION REQUIRED
+                      </div>
+                      <form onSubmit={handleVerificationSubmit} className="space-y-3">
+                        <div>
+                          <label className="block text-[10px] font-mono text-gray-400 mb-1">CODENAME / NAME</label>
+                          <input
+                            type="text"
+                            required
+                            value={userDetails.name}
+                            onChange={(e) => setUserDetails(prev => ({ ...prev, name: e.target.value }))}
+                            className="w-full bg-black/50 border border-cyber-blue/20 rounded px-2 py-1 text-xs text-white focus:border-cyber-blue/60 outline-none"
+                            placeholder="Enter your name"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-mono text-gray-400 mb-1">SECURE UPLINK / EMAIL</label>
+                          <input
+                            type="email"
+                            required
+                            value={userDetails.email}
+                            onChange={(e) => setUserDetails(prev => ({ ...prev, email: e.target.value }))}
+                            className="w-full bg-black/50 border border-cyber-blue/20 rounded px-2 py-1 text-xs text-white focus:border-cyber-blue/60 outline-none"
+                            placeholder="name@example.com"
+                          />
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowVerification(false);
+                              setPendingMessage("");
+                            }}
+                            className="flex-1 py-1 rounded border border-red-500/30 text-red-400 text-xs hover:bg-red-500/10"
+                          >
+                            ABORT
+                          </button>
+                          <button
+                            type="submit"
+                            className="flex-1 py-1 rounded bg-cyber-blue/20 border border-cyber-blue/50 text-cyber-blue text-xs hover:bg-cyber-blue/30"
+                          >
+                            TRANSMIT
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
         )}
