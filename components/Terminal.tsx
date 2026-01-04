@@ -85,6 +85,15 @@ const MessageDetailView = ({ message, onReply, onDelete }: { message: Message, o
 
 export default function Terminal() {
 
+  // Helper for message cleaning
+  const parseMessage = (content: string) => {
+    try {
+      const obj = JSON.parse(content);
+      return obj.message || obj.text || content;
+    } catch {
+      return "[CORRUPTED DATA] " + content;
+    }
+  };
   const {
     mode,
     setMode,
@@ -116,6 +125,7 @@ export default function Terminal() {
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [isOutputExpanded, setIsOutputExpanded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll history
   useEffect(() => {
@@ -124,7 +134,73 @@ export default function Terminal() {
     }
   }, [history]);
 
+  // Keyboard navigation for Admin Message List
+  useEffect(() => {
+    if (mode !== 'admin' || !listRef.current) return;
+
+    const handleListNavigation = (e: KeyboardEvent) => {
+      // Only handle if input buffer is not focused (or maybe always? let's stick to global if input empty)
+      // But we have an input field always focused. Let's make it work via special keys or focus management.
+      // Simplest: Check if active element is input, if input empty, allow navigation? 
+      // Or use Ctrl+Up/Down?
+      // Requirement says "Up/Down: select message". This conflicts with history navigation if input focused.
+      // Let's assume history nav is for command line, message nav is for list.
+      // We'll implement: if Input is focused, Up/Down does history. 
+      // IF we want message nav, maybe we need to focus the list?
+      // "Navigasi dengan keyboard" usually implies focus management.
+      
+      // However, to keep it simple as per "Cyberpunk Terminal" feel:
+      // Let's map Alt+Up/Down for list navigation if input focused?
+      // Or just standard Up/Down if input is empty?
+      // Let's try: If Input is empty, Up/Down moves list selection.
+      // If Input has text, Up/Down does nothing or history? History usually works even with text.
+      
+      // Better approach for dual usage:
+      // Since history is less used in GUI mode, let's prioritize Message List navigation 
+      // when in Dashboard view, UNLESS user explicitly focused command line?
+      // Actually, command line `input` has `autoFocus`.
+      
+      // Let's add a listener to the window/document when in Dashboard mode.
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+         // We'll implement this logic inside the component render or a specific handler
+      }
+    };
+    
+    // window.addEventListener('keydown', handleListNavigation);
+    // return () => window.removeEventListener('keydown', handleListNavigation);
+  }, [mode]);
+
+  // Enhanced handleKeyDown to support List Navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Admin Dashboard Navigation
+    if (mode === 'admin' && view === 'dashboard' && filteredMessages.length > 0) {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const currentIndex = selectedMessage ? filteredMessages.findIndex(m => m.id === selectedMessage.id) : -1;
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : filteredMessages.length - 1;
+        openMessage(filteredMessages[prevIndex]);
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const currentIndex = selectedMessage ? filteredMessages.findIndex(m => m.id === selectedMessage.id) : -1;
+        const nextIndex = currentIndex < filteredMessages.length - 1 ? currentIndex + 1 : 0;
+        openMessage(filteredMessages[nextIndex]);
+        return;
+      }
+      if (e.key === 'Enter' && e.ctrlKey) { // Ctrl+Enter to reply
+        e.preventDefault();
+        handleReplyClick();
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        processCommand('exit');
+        return;
+      }
+    }
+
+    // Default History Navigation
     if (e.key === 'ArrowUp') {
       e.preventDefault();
       navigateHistory('up');
@@ -139,22 +215,53 @@ export default function Terminal() {
     }
   };
 
+  // --- GUEST VIEW LOGIC ---
+  const [isTerminalReady, setIsTerminalReady] = useState(false);
+  const [welcomeText, setWelcomeText] = useState("");
+  const FULL_WELCOME_TEXT = "System Online. Type your message to initiate contact...";
+
+  useEffect(() => {
+    // Initial loading animation
+    const timer = setTimeout(() => {
+      let i = 0;
+      const typeWriter = setInterval(() => {
+        setWelcomeText(FULL_WELCOME_TEXT.substring(0, i + 1));
+        i++;
+        if (i === FULL_WELCOME_TEXT.length) {
+          clearInterval(typeWriter);
+          setIsTerminalReady(true);
+        }
+      }, 50); // Typing speed
+      return () => clearInterval(typeWriter);
+    }, 1000); // Initial delay
+    return () => clearTimeout(timer);
+  }, []);
+
+  const [errorMessage, setErrorMessage] = useState("");
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'retry' | 'error'>('connected');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputBuffer.trim()) return;
-
-    const cmd = inputBuffer.trim();
-    setInputBuffer("");
+    setErrorMessage(""); // Clear error
     
-    // Check for public message vs command
-    if (mode === 'public' && !cmd.startsWith('sudo') && !cmd.startsWith('clear')) {
-      // Treat as message attempt
-      setShowVerification(true);
+    if (!inputBuffer.trim()) return;
+    
+    // Command handling
+    const cmd = inputBuffer.trim();
+    if (cmd.startsWith('sudo') || cmd.startsWith('clear')) {
+       setInputBuffer("");
+       await processCommand(cmd);
+       return;
+    }
+
+    // Guest Message Validation
+    if (cmd.length < 10) {
+      setErrorMessage("Minimum 10 characters required.");
+      // Trigger shake animation via class
       return;
     }
 
-    // Process as command
-    await processCommand(cmd);
+    setShowVerification(true);
   };
 
   const handleVerificationSubmit = async (e: React.FormEvent) => {
@@ -316,24 +423,29 @@ export default function Terminal() {
           </div>
           {/* Message List */}
           <div className="flex-1 overflow-y-auto">
-            {filteredMessages.map(msg => (
-              <button
-                key={msg.id}
-                onClick={() => openMessage(msg)}
-                className={`w-full text-left p-3 border-b border-amber-500/10 hover:bg-amber-500/10 transition-colors ${selectedMessage?.id === msg.id ? 'bg-amber-500/20' : ''}`}
-              >
-                <div className="flex justify-between items-start mb-1">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-sm truncate text-amber-500">
-                       <span className="opacity-50 mr-2 text-xs">#{msg.index}</span>
-                       {msg.sender_name || "Unknown"}
+            {filteredMessages.map((msg, idx) => {
+              const isActive = selectedMessage?.id === msg.id;
+              return (
+                <button
+                  key={msg.id}
+                  onClick={() => openMessage(msg)}
+                  className={`w-full text-left p-3 border-b border-amber-500/10 hover:bg-amber-500/10 transition-colors ${isActive ? 'bg-amber-500/20 border-l-4 border-l-amber-500' : ''}`}
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <div className="flex-1 min-w-0">
+                      <div className={`font-mono text-sm truncate ${isActive ? 'text-amber-400 font-bold' : 'text-amber-500'}`}>
+                         <span className="opacity-50 mr-2 text-xs">[{msg.index}]</span>
+                         {msg.sender_name || "Unknown"} &lt;{msg.sender_email || "No Email"}&gt;
+                      </div>
+                      <div className="text-xs text-amber-500/50 truncate mt-1">
+                        {parseMessage(msg.content)}
+                      </div>
                     </div>
-                    <div className="text-xs text-amber-500/50 truncate">{msg.sender_email || "No Email"}</div>
+                    {!msg.is_read && <span className="text-[10px] bg-amber-500 text-black px-1 rounded font-bold ml-2">NEW</span>}
                   </div>
-                  {!msg.is_read && <span className="text-[10px] bg-amber-500 text-black px-1 rounded font-bold ml-2">NEW</span>}
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -385,6 +497,9 @@ export default function Terminal() {
         
         {/* Output Scroll Area */}
         <div className="flex-1 overflow-y-auto p-2 font-mono text-[11px] space-y-1 bg-black/50 border-t border-amber-500/10" ref={scrollRef}>
+          <div className="text-amber-500/70 text-[10px] mb-2 border-b border-amber-500/20 pb-1">
+             ↑↓ to navigate | Enter to reply | ESC to exit
+          </div>
           {history.map((line, i) => (
             <div key={i} className={`${line.startsWith('>') ? 'text-amber-300 font-bold' : 'text-amber-500/70'}`}>
               {line}
@@ -436,6 +551,12 @@ export default function Terminal() {
       <div className="flex-1 p-4 font-mono text-xs overflow-y-auto relative" ref={scrollRef}>
         {view === 'receipt' ? renderReceipt() : (
           <div className="space-y-1">
+            {/* Welcome Message */}
+            <div className="text-cyber-cyan/80 mb-4 h-6">
+              {welcomeText}
+              {!isTerminalReady && <span className="animate-pulse">_</span>}
+            </div>
+
             {history.map((line, i) => (
               <div key={i} className={`
                 ${line.startsWith('>') ? 'opacity-100 font-bold' : 'opacity-70'}
@@ -459,7 +580,7 @@ export default function Terminal() {
             )}
 
             {/* Input Line */}
-            {!isTransmitting && !isProcessing && (
+            {!isTransmitting && !isProcessing && isTerminalReady && (
               <div className="flex gap-2 mt-2 relative">
                 <span className="font-bold">&gt;</span>
                 <form onSubmit={view === 'login' ? handleLoginSubmit : handleSubmit} className="flex-1" autoComplete="off">
@@ -468,10 +589,19 @@ export default function Terminal() {
                     value={inputBuffer}
                     onChange={(e) => setInputBuffer(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    className={`w-full bg-transparent border-none outline-none ${mode === 'admin' ? 'text-amber-500 placeholder-amber-800' : 'text-cyber-cyan placeholder-cyber-cyan/30'}`}
-                    placeholder={view === 'login' ? 'Enter Password' : "Type message or 'sudo login'..."}
+                    className={`w-full bg-transparent border-none outline-none font-mono text-sm ${
+                      mode === 'admin' 
+                        ? 'text-amber-500 placeholder-amber-800' 
+                        : 'text-cyber-cyan placeholder-cyber-cyan/30 focus:border-b-2 focus:border-cyber-cyan'
+                    } ${errorMessage ? 'animate-shake border-b-2 border-red-500 text-red-500' : ''}`}
+                    placeholder={view === 'login' ? 'Enter Password' : "Type your message here..."}
                     autoFocus
                   />
+                  {errorMessage && (
+                    <div className="absolute top-full left-0 text-red-500 text-[10px] mt-1 font-bold animate-pulse">
+                      [ERROR] {errorMessage}
+                    </div>
+                  )}
                 </form>
                 {/* Autocomplete Suggestions */}
                 {suggestions.length > 0 && inputBuffer && view !== 'login' && (
