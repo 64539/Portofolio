@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { Resend } from "resend";
 
 export const runtime = "nodejs";
 
@@ -74,15 +75,43 @@ export async function POST(req: Request) {
     const expected = process.env.NEXT_PUBLIC_ADMIN_SECRET_KEY ?? process.env.ADMIN_SECRET_KEY ?? "";
     const provided = (req.headers.get("x-admin-key") ?? "").trim();
 
-    if (!expected) {
-      return NextResponse.json({ ok: false, error: "ADMIN_SECRET_NOT_SET" }, { status: 500 });
-    }
-
-    if (!timingSafeEqual(provided, expected)) {
+    if (!expected || !timingSafeEqual(provided, expected)) {
       return NextResponse.json({ ok: false, error: "ACCESS_DENIED" }, { status: 401 });
     }
 
-    const body = (await req.json()) as { user_session?: string; content?: string };
+    const body = await req.json();
+    
+    // Check if this is a reply (Resend integration)
+    if (body.reply_to_email) {
+       const { id, content, reply_to_email, reply_to_name } = body;
+       
+       if (!id || !content) {
+         return NextResponse.json({ ok: false, error: "MISSING_FIELDS" }, { status: 400 });
+       }
+
+       const resendApiKey = process.env.RESEND_API_KEY;
+       if (resendApiKey) {
+         const resend = new Resend(resendApiKey);
+         await resend.emails.send({
+           from: "Portofolio Terminal <onboarding@resend.dev>",
+           to: [reply_to_email],
+           subject: `Re: [Ticket #${id.slice(0, 8)}] Response from Admin`,
+           html: `
+             <div style="font-family: monospace; padding: 20px; background: #000; color: #fff;">
+               <p>Dear ${reply_to_name || 'Guest'},</p>
+               <p>Admin has responded to your message:</p>
+               <div style="border-left: 2px solid #FBBF24; padding-left: 10px; margin: 10px 0; color: #FBBF24;">
+                 ${content.replace(/\n/g, '<br>')}
+               </div>
+               <p style="color: #666; font-size: 12px;">--<br>Secure Terminal Transmission</p>
+             </div>
+           `,
+         });
+       }
+       return NextResponse.json({ ok: true });
+    }
+
+    // Default POST behavior (Admin sending message to DB directly, if needed)
     const userSession = (body.user_session ?? "").trim();
     const content = (body.content ?? "").trim();
 

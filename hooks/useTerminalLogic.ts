@@ -197,29 +197,100 @@ export const useTerminalLogic = () => {
              addToHistory('Usage: read <index|id>');
           }
           break;
-        case 'delete':
-          if (args[1]) {
-             // Find by index first, then ID
+        case 'reply':
+          // Syntax: reply <index> <message...>
+          if (args.length >= 3) {
              const index = parseInt(args[1]);
-             let msgId = args[1];
+             let msg: Message | undefined;
+             
+             if (!isNaN(index)) {
+               msg = messages.find(m => m.index === index);
+             } else {
+               // Fallback ID support
+               msg = messages.find(m => m.id.startsWith(args[1]));
+             }
+
+             if (msg) {
+               const replyContent = args.slice(2).join(' ').replace(/^"|"$/g, ''); // Remove surrounding quotes if present
+               
+               addToHistory(`> REPLYING TO #${msg.index || '?'}: "${replyContent}"...`);
+               
+               try {
+                 const res = await fetch('/api/admin/messages', {
+                   method: 'POST',
+                   headers: { 
+                     'Content-Type': 'application/json',
+                     'x-admin-key': adminKey 
+                   },
+                   body: JSON.stringify({
+                     id: msg.id,
+                     content: replyContent,
+                     reply_to_email: msg.sender_email,
+                     reply_to_name: msg.sender_name
+                   })
+                 });
+
+                 if (res.ok) {
+                   addToHistory('> REPLY SENT [SUCCESS]');
+                 } else {
+                   addToHistory('> ERROR: Failed to send reply.');
+                 }
+               } catch {
+                 addToHistory('> ERROR: Network failure.');
+               }
+             } else {
+               addToHistory(`> ERROR: Message #${args[1]} not found.`);
+             }
+          } else {
+            addToHistory('Usage: reply <index> <message>');
+          }
+          break;
+        case 'delete':
+          // Syntax: delete <index|id> [confirm-flag]
+          // confirm-flag is internal, used when UI button calls processCommand directly
+          const targetId = args[1];
+          const isConfirmed = args[2] === '--force';
+
+          if (targetId) {
+             // Find by index first, then ID
+             const index = parseInt(targetId);
+             let msgId = targetId;
+             let msgIndex = targetId;
              
              if (!isNaN(index)) {
                const found = messages.find(m => m.index === index);
-               if (found) msgId = found.id;
+               if (found) {
+                 msgId = found.id;
+                 msgIndex = found.index?.toString() || targetId;
+               } else {
+                 addToHistory(`> ERROR: Message #${index} not found.`);
+                 setIsProcessing(false);
+                 return;
+               }
              }
 
-             if (confirm(`Delete message ${args[1]}?`)) {
-               const res = await fetch(`/api/admin/messages?id=${msgId}`, {
-                 method: 'DELETE',
-                 headers: { 'x-admin-key': adminKey }
-               });
-               if (res.ok) {
-                 addToHistory(`> Message ${args[1]} deleted.`);
-                 fetchMessages();
-                 setSelectedMessage(null);
-               } else {
-                 addToHistory(`> Error deleting message.`);
+             if (isConfirmed || confirm(`DELETE MESSAGE #${msgIndex}: Are you sure? This action cannot be undone.`)) {
+               addToHistory(`> DELETING MESSAGE #${msgIndex}...`);
+               
+               try {
+                 const res = await fetch(`/api/admin/messages?id=${msgId}`, {
+                   method: 'DELETE',
+                   headers: { 'x-admin-key': adminKey }
+                 });
+                 if (res.ok) {
+                   addToHistory(`> DELETING MESSAGE #${msgIndex}... [SUCCESS]`);
+                   await fetchMessages(); // Auto refresh
+                   if (selectedMessage?.id === msgId) {
+                     setSelectedMessage(null);
+                   }
+                 } else {
+                   addToHistory(`> ERROR: Failed to delete message.`);
+                 }
+               } catch {
+                 addToHistory(`> ERROR: Network failure.`);
                }
+             } else {
+               addToHistory('> ACTION ABORTED.');
              }
           } else {
             addToHistory('Usage: delete <index|id>');
@@ -237,7 +308,7 @@ export const useTerminalLogic = () => {
         case 'help':
           addToHistory('Admin Commands:');
           addToHistory('----------------');
-          COMMANDS.forEach(c => addToHistory(`  - ${c}`));
+          ['inbox', 'read <id>', 'reply <id> <msg>', 'delete <id>', 'clear', 'exit'].forEach(c => addToHistory(`  - ${c}`));
           addToHistory('----------------');
           break;
         default:

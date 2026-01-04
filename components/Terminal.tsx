@@ -386,7 +386,7 @@ export default function Terminal() {
   const handleDeleteClick = () => {
     if (selectedMessage) {
       if (confirm("DELETE MESSAGE: Are you sure? This action cannot be undone.")) {
-        processCommand(`delete ${selectedMessage.index}`);
+        processCommand(`delete ${selectedMessage.index} --force`);
       }
     }
   };
