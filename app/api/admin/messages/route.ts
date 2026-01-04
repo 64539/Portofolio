@@ -90,24 +90,44 @@ export async function POST(req: Request) {
        }
 
        const resendApiKey = process.env.RESEND_API_KEY;
-       if (resendApiKey) {
-         const resend = new Resend(resendApiKey);
-         await resend.emails.send({
-           from: "Portofolio Terminal <onboarding@resend.dev>",
-           to: [reply_to_email],
-           subject: `Re: [Ticket #${id.slice(0, 8)}] Response from Admin`,
-           html: `
-             <div style="font-family: monospace; padding: 20px; background: #000; color: #fff;">
-               <p>Dear ${reply_to_name || 'Guest'},</p>
-               <p>Admin has responded to your message:</p>
-               <div style="border-left: 2px solid #FBBF24; padding-left: 10px; margin: 10px 0; color: #FBBF24;">
-                 ${content.replace(/\n/g, '<br>')}
-               </div>
-               <p style="color: #666; font-size: 12px;">--<br>Secure Terminal Transmission</p>
-             </div>
-           `,
-         });
-       }
+        if (resendApiKey) {
+          const resend = new Resend(resendApiKey);
+          await resend.emails.send({
+            from: "Jabriel Dev <terminal@resend.dev>", // Updated sender name
+            to: [reply_to_email],
+            subject: `[TICKET #${id.slice(0, 8)}] ENCRYPTED RESPONSE`,
+            html: `
+              <div style="font-family: 'Courier New', monospace; max-width: 600px; margin: 0 auto; background-color: #ffffff; color: #333333; line-height: 1.6;">
+                <header style="border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 24px;">
+                  <h2 style="margin: 0; font-size: 18px; letter-spacing: 1px;">[ ENCRYPTED RESPONSE FROM JABRIEL_DEV ]</h2>
+                  <div style="font-size: 12px; color: #666; margin-top: 4px;">TICKET ID: ${id}</div>
+                </header>
+                
+                <div style="margin-bottom: 20px;">
+                  <div style="font-size: 12px; color: #666; margin-bottom: 4px;">&gt; INCOMING TRANSMISSION:</div>
+                  <blockquote style="background: #f5f5f5; padding: 12px 16px; margin: 0; border-left: 4px solid #ccc; font-style: italic;">
+                    "Message received from ${reply_to_name || 'Guest'}..."
+                  </blockquote>
+                </div>
+                
+                <div style="margin-bottom: 30px;">
+                  <div style="font-size: 12px; color: #FBBF24; font-weight: bold; margin-bottom: 4px;">&gt; ADMIN RESPONSE:</div>
+                  <div style="background: #FFFBEB; border: 1px solid #FCD34D; padding: 16px; border-radius: 4px; color: #92400E;">
+                    ${content.replace(/\n/g, '<br>')}
+                  </div>
+                </div>
+                
+                <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 11px; color: #888; text-align: center;">
+                  TERMINAL OUTPUT SIMULATION<br>
+                  [ |||||||||||||||| ] 100%<br>
+                  PROCESS COMPLETED<br>
+                  <br>
+                  &copy; ${new Date().getFullYear()} Jabriel Dev Portfolio. All rights reserved.
+                </footer>
+              </div>
+            `,
+          });
+        }
        return NextResponse.json({ ok: true });
     }
 

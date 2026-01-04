@@ -52,8 +52,20 @@ export const useTerminalLogic = () => {
     return [];
   }, [inputBuffer, COMMANDS]);
 
+  const [lastLogTime, setLastLogTime] = useState(0);
+
   const addToHistory = (line: string) => {
-    setHistory(prev => [...prev.slice(-49), line]);
+    // Debounce & prevent duplicates
+    const now = Date.now();
+    if (now - lastLogTime < 50 && history.length > 0 && history[history.length - 1] === line) {
+      return;
+    }
+    setLastLogTime(now);
+    setHistory(prev => {
+      // Limit history to 50 lines to prevent performance issues
+      const newHistory = [...prev, line];
+      return newHistory.slice(-50);
+    });
   };
 
   const navigateHistory = (direction: 'up' | 'down') => {
@@ -279,10 +291,21 @@ export const useTerminalLogic = () => {
                  });
                  if (res.ok) {
                    addToHistory(`> DELETING MESSAGE #${msgIndex}... [SUCCESS]`);
-                   await fetchMessages(); // Auto refresh
+                   
+                   // Optimistic update
+                   setMessages(prev => prev.filter(m => m.id !== msgId));
+                   
+                   // Reset selection if deleted message was active
                    if (selectedMessage?.id === msgId) {
                      setSelectedMessage(null);
                    }
+                   
+                   // Update stats
+                   setStats(prev => ({
+                     total: Math.max(0, prev.total - 1),
+                     unread: selectedMessage?.is_read ? prev.unread : Math.max(0, prev.unread - 1)
+                   }));
+
                  } else {
                    addToHistory(`> ERROR: Failed to delete message.`);
                  }

@@ -560,8 +560,9 @@ export default function Terminal() {
             {history.map((line, i) => (
               <div key={i} className={`
                 ${line.startsWith('>') ? 'opacity-100 font-bold' : 'opacity-70'}
+                ${line.includes('[SUCCESS]') ? 'text-green-500 font-bold' : ''}
+                ${line.includes('ERROR') || line.includes('Access Denied') || line.includes('EXPIRED') ? 'text-red-500 font-bold' : ''}
                 ${line.includes('Access Granted') ? 'text-green-500 font-bold animate-pulse' : ''}
-                ${line.includes('Access Denied') || line.includes('EXPIRED') ? 'text-red-500 font-bold' : ''}
               `}>
                 {line}
               </div>
