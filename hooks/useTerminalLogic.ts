@@ -328,10 +328,43 @@ export const useTerminalLogic = () => {
           setAdminKey('');
           addToHistory('Logged out.');
           break;
+        case 'clean':
+          if (confirm('WARNING: This will permanently delete ALL messages marked as READ. Continue?')) {
+            addToHistory('> INITIATING CLEAN SEQUENCE...');
+            try {
+              const res = await fetch('/api/admin/messages?id=all_read', {
+                method: 'DELETE',
+                headers: { 'x-admin-key': adminKey }
+              });
+              if (res.ok) {
+                // Optimistic update
+                setMessages(prev => prev.filter(m => !m.is_read));
+                setStats(prev => ({ ...prev, total: prev.unread }));
+                if (selectedMessage?.is_read) setSelectedMessage(null);
+                
+                addToHistory('> SYSTEM PURGED [SUCCESS]');
+              } else {
+                addToHistory('> ERROR: DATABASE ENCRYPTION LOCK FAILED.');
+              }
+            } catch {
+              addToHistory('> ERROR: CONNECTION LOST.');
+            }
+          }
+          break;
+        case 'stats':
+          const unreadCount = messages.filter(m => !m.is_read).length;
+          const readCount = messages.filter(m => m.is_read).length;
+          addToHistory('SYSTEM DIAGNOSTICS:');
+          addToHistory('-------------------');
+          addToHistory(`TOTAL PACKETS  : ${messages.length}`);
+          addToHistory(`UNREAD DATA    : ${unreadCount}`);
+          addToHistory(`ARCHIVED DATA  : ${readCount}`);
+          addToHistory('-------------------');
+          break;
         case 'help':
           addToHistory('Admin Commands:');
           addToHistory('----------------');
-          ['inbox', 'read <id>', 'reply <id> <msg>', 'delete <id>', 'clear', 'exit'].forEach(c => addToHistory(`  - ${c}`));
+          ['inbox', 'read <id>', 'reply <id> <msg>', 'delete <id>', 'clean', 'stats', 'clear', 'exit'].forEach(c => addToHistory(`  - ${c}`));
           addToHistory('----------------');
           break;
         default:

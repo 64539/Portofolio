@@ -95,6 +95,7 @@ export async function POST(req: Request) {
           await resend.emails.send({
             from: "Jabriel Dev <terminal@resend.dev>", // Updated sender name
             to: [reply_to_email],
+            replyTo: "jabriel.dev@gmail.com", // Direct reply to admin
             subject: `[TICKET #${id.slice(0, 8)}] ENCRYPTED RESPONSE`,
             html: `
               <div style="font-family: 'Courier New', monospace; max-width: 600px; margin: 0 auto; background-color: #ffffff; color: #333333; line-height: 1.6;">
@@ -177,6 +178,17 @@ export async function DELETE(req: Request) {
     }
 
     const supabase = createSupabaseServerClient();
+    
+    // Handle bulk delete for 'clean' command
+    if (id === 'all_read') {
+      const { error } = await supabase.from("messages").delete().eq("is_read", true);
+      if (error) {
+        return NextResponse.json({ ok: false, error: "DB_BULK_DELETE_FAILED" }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    // Standard single delete
     const { error } = await supabase.from("messages").delete().eq("id", id);
 
     if (error) {

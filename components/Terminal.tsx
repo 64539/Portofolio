@@ -379,6 +379,10 @@ export default function Terminal() {
 
   const handleReplyClick = () => {
     if (selectedMessage) {
+      if (!selectedMessage.is_read) {
+        // Auto mark as read when replying
+        openMessage(selectedMessage);
+      }
       setInputBuffer(`reply ${selectedMessage.index} `);
     }
   };
@@ -423,7 +427,12 @@ export default function Terminal() {
           </div>
           {/* Message List */}
           <div className="flex-1 overflow-y-auto">
-            {filteredMessages.map((msg, idx) => {
+          {!filteredMessages.length ? (
+             <div className="p-4 text-center opacity-40 italic">
+               NO DATA STREAM FOUND
+             </div>
+          ) : (
+            filteredMessages.map((msg, idx) => {
               const isActive = selectedMessage?.id === msg.id;
               return (
                 <button
@@ -434,6 +443,7 @@ export default function Terminal() {
                   <div className="flex justify-between items-start mb-1">
                     <div className="flex-1 min-w-0">
                       <div className={`font-mono text-sm truncate ${isActive ? 'text-amber-400 font-bold' : 'text-amber-500'}`}>
+                         {!msg.is_read && <span className="inline-block w-2 h-2 rounded-full bg-amber-500 mr-2 animate-pulse" />}
                          <span className="opacity-50 mr-2 text-xs">[{msg.index}]</span>
                          {msg.sender_name || "Unknown"} &lt;{msg.sender_email || "No Email"}&gt;
                       </div>
@@ -445,7 +455,8 @@ export default function Terminal() {
                   </div>
                 </button>
               );
-            })}
+            })
+          )}
           </div>
         </div>
 
@@ -456,7 +467,7 @@ export default function Terminal() {
           ) : (
             <div className="h-full flex flex-col items-center justify-center opacity-40">
               <TerminalIcon size={48} className="mb-4 opacity-50" />
-              <div className="text-sm tracking-widest">SELECT A DATA STREAM</div>
+              <div className="text-sm tracking-widest font-mono text-amber-500 animate-pulse">&gt; SYSTEM: STANDBY. SELECT A PACKET TO DECRYPT.</div>
             </div>
           )}
         </div>
