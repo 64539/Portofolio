@@ -9,14 +9,14 @@ const syne = Syne({ subsets: ["latin"], variable: "--font-syne" });
 const firaCode = Fira_Code({ subsets: ["latin"], variable: "--font-fira-code" });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://jabriel-dev.com'), // Ganti dengan domain asli jika ada
+  metadataBase: new URL('https://jabriel-dev.vercel.app'), // Updated to Vercel domain
   title: {
     default: "Jabriel Srizki Arjati | Secure Fullstack Developer",
     template: "%s | Jabriel Srizki Arjati"
   },
   description: "Portofolio Cyberpunk Futuristik Jabriel Srizki Arjati. Fullstack Developer spesialis keamanan, React, Next.js, dan Node.js.",
   keywords: ["Fullstack Developer", "Cyber Security", "Next.js", "React", "Node.js", "Cyberpunk Portfolio", "Web Developer Indonesia"],
-  authors: [{ name: "Jabriel Srizki Arjati", url: "https://jabriel-dev.com" }],
+  authors: [{ name: "Jabriel Srizki Arjati", url: "https://jabriel-dev.vercel.app" }],
   creator: "Jabriel Srizki Arjati",
   publisher: "Jabriel Srizki Arjati",
   formatDetection: {
@@ -25,18 +25,18 @@ export const metadata: Metadata = {
     telephone: false,
   },
   verification: {
-    google: "GOOGLE_VERIFICATION_CODE_PLACEHOLDER", // Placeholder untuk kode verifikasi
+    google: "sncxpHrkg03YWXUlrF03A5lBLbdL26rax6Q6IZa_HyY", // Updated verification code
   },
   openGraph: {
     title: "Jabriel Srizki Arjati | Secure Fullstack Developer",
     description: "Portofolio Cyberpunk Futuristik Jabriel Srizki Arjati. Spesialis keamanan dan pengembangan web modern.",
-    url: 'https://jabriel-dev.com',
+    url: 'https://jabriel-dev.vercel.app',
     siteName: 'Jabriel Dev Portfolio',
     locale: 'id_ID',
     type: 'website',
     images: [
       {
-        url: '/og-image.jpg', // Pastikan membuat gambar ini nanti
+        url: '/jabriel-srizki-profile.jpg', // Updated image path
         width: 1200,
         height: 630,
         alt: 'Jabriel Dev Cyberpunk Portfolio',
@@ -47,8 +47,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: "Jabriel Srizki Arjati | Secure Fullstack Developer",
     description: "Portofolio Cyberpunk Futuristik Jabriel Srizki Arjati. Spesialis keamanan dan pengembangan web modern.",
-    creator: '@jabrieldev', // Ganti dengan username twitter asli jika ada
-    images: ['/og-image.jpg'],
+    creator: '@jabrieldev', 
+    images: ['/jabriel-srizki-profile.jpg'],
   },
   robots: {
     index: true,
@@ -86,17 +86,17 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Person",
               "name": "Jabriel Srizki Arjati",
-              "url": "https://jabriel-dev.com",
-              "image": "https://jabriel-dev.com/profile.jpg", // Pastikan ada gambar profil
+              "url": "https://jabriel-dev.vercel.app",
+              "image": "https://jabriel-dev.vercel.app/jabriel-srizki-profile.jpg",
               "jobTitle": "Fullstack Developer",
               "worksFor": {
                 "@type": "Organization",
                 "name": "Freelance"
               },
               "sameAs": [
-                "https://github.com/jabrieldev", // Ganti dengan link asli
-                "https://linkedin.com/in/jabrieldev",
-                "https://twitter.com/jabrieldev"
+                "https://github.com/64539",
+                "https://www.instagram.com/codex24434",
+                "mailto:jabrielsrizkiarjati2311@gmail.com"
               ],
               "knowsAbout": ["Fullstack Development", "Cyber Security", "React", "Next.js", "Node.js", "TypeScript"]
             }),

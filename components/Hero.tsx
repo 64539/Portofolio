@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 import GlitchText from "./ui/GlitchText";
 import CyberButton from "./ui/CyberButton";
@@ -32,6 +33,28 @@ export default function Hero() {
           <span className="text-xs font-mono text-cyber-blue tracking-widest uppercase">
             System Online // Security Protocols Active
           </span>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.1 }}
+          className="mb-6 relative w-32 h-32 md:w-40 md:h-40 mx-auto group"
+        >
+          <div className="absolute inset-0 rounded-full border-2 border-cyber-blue/30 group-hover:border-cyber-blue/80 transition-all duration-500 animate-pulse-slow"></div>
+          <div className="absolute inset-0 rounded-full overflow-hidden border-2 border-transparent">
+             {/* Placeholder for Profile Image - Replace src with actual image path */}
+             <div className="w-full h-full bg-cyber-blue/10 flex items-center justify-center text-cyber-blue/50 text-xs font-mono">
+               <Image 
+                 src="/jabriel-srizki-profile.jpg" 
+                 alt="Jabriel Srizki Arjati"
+                 width={160}
+                 height={160}
+                 className="object-cover"
+                 priority
+               />
+             </div>
+          </div>
         </motion.div>
 
         <motion.div
