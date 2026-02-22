@@ -1,54 +1,43 @@
 import type { Metadata } from "next";
-import { Inter, Syne, Fira_Code } from "next/font/google";
-import Navbar from "@/components/Navbar";
-import "leaflet/dist/leaflet.css";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const syne = Syne({ subsets: ["latin"], variable: "--font-syne" });
-const firaCode = Fira_Code({ subsets: ["latin"], variable: "--font-fira-code" });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://jabriel-dev.vercel.app'), // Updated to Vercel domain
+  metadataBase: new URL('https://jabriel-dev.vercel.app'),
   title: {
-    default: "Jabriel Srizki Arjati | Secure Fullstack Developer",
+    default: "Jabriel Srizki Arjati | Fullstack Developer for Small Businesses",
     template: "%s | Jabriel Srizki Arjati"
   },
-  description: "Portofolio Cyberpunk Futuristik Jabriel Srizki Arjati. Fullstack Developer spesialis keamanan, React, Next.js, dan Node.js.",
-  keywords: ["Fullstack Developer", "Cyber Security", "Next.js", "React", "Node.js", "Cyberpunk Portfolio", "Web Developer Indonesia"],
+  description: "I build fast, secure, and high-converting websites for small businesses and startups. Get a custom landing page or fullstack app ready to launch in weeks.",
+  keywords: ["Freelance Web Developer", "Small Business Website", "Next.js Developer", "Landing Page Designer", "Fullstack Developer", "Jakarta Web Developer"],
   authors: [{ name: "Jabriel Srizki Arjati", url: "https://jabriel-dev.vercel.app" }],
   creator: "Jabriel Srizki Arjati",
-  publisher: "Jabriel Srizki Arjati",
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  verification: {
-    google: "sncxpHrkg03YWXUlrF03A5lBLbdL26rax6Q6IZa_HyY", // Updated verification code
-  },
   openGraph: {
-    title: "Jabriel Srizki Arjati | Secure Fullstack Developer",
-    description: "Portofolio Cyberpunk Futuristik Jabriel Srizki Arjati. Spesialis keamanan dan pengembangan web modern.",
+    title: "Jabriel Srizki Arjati | Fullstack Developer",
+    description: "Professional web development services for small businesses. Fast, secure, and affordable.",
     url: 'https://jabriel-dev.vercel.app',
     siteName: 'Jabriel Dev Portfolio',
-    locale: 'id_ID',
+    locale: 'en_US',
     type: 'website',
     images: [
       {
-        url: '/jabriel-srizki-profile.jpg', // Updated image path
+        url: '/images/og-image.png', // Needs to be added to public
         width: 1200,
         height: 630,
-        alt: 'Jabriel Dev Cyberpunk Portfolio',
+        alt: 'Jabriel Srizki Arjati Portfolio',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Jabriel Srizki Arjati | Secure Fullstack Developer",
-    description: "Portofolio Cyberpunk Futuristik Jabriel Srizki Arjati. Spesialis keamanan dan pengembangan web modern.",
-    creator: '@jabrieldev', 
-    images: ['/jabriel-srizki-profile.jpg'],
+    title: "Jabriel Srizki Arjati | Fullstack Developer",
+    description: "High-performance web development for startups and small businesses.",
+    images: ['/images/og-image.png'],
+  },
+  alternates: {
+    canonical: 'https://jabriel-dev.vercel.app',
   },
   robots: {
     index: true,
@@ -69,16 +58,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="scroll-smooth">
       <body
-        className={`${inter.variable} ${syne.variable} ${firaCode.variable} antialiased bg-black text-white overflow-x-hidden`}
+        className={`${inter.variable} antialiased bg-background text-foreground overflow-x-hidden`}
       >
-        <div className="fixed inset-0 z-[-1] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-black to-black opacity-80 pointer-events-none" />
-        <div className="fixed inset-0 z-[-1] bg-grid opacity-20 pointer-events-none" />
-        <div className="scanlines fixed inset-0 z-[50] pointer-events-none opacity-30" />
-        
-        <Navbar />
-        
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -87,22 +70,16 @@ export default function RootLayout({
               "@type": "Person",
               "name": "Jabriel Srizki Arjati",
               "url": "https://jabriel-dev.vercel.app",
-              "image": "https://jabriel-dev.vercel.app/jabriel-srizki-profile.jpg",
               "jobTitle": "Fullstack Developer",
-              "worksFor": {
-                "@type": "Organization",
-                "name": "Freelance"
-              },
+              "knowsAbout": ["Web Development", "Next.js", "React", "TypeScript", "Database Design"],
+              "image": "https://jabriel-dev.vercel.app/images/og-image.png",
               "sameAs": [
                 "https://github.com/64539",
-                "https://www.instagram.com/codex24434",
-                "mailto:jabrielsrizkiarjati2311@gmail.com"
-              ],
-              "knowsAbout": ["Fullstack Development", "Cyber Security", "React", "Next.js", "Node.js", "TypeScript"]
+                "https://www.instagram.com/codex24434"
+              ]
             }),
           }}
         />
-        
         {children}
       </body>
     </html>

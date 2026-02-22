@@ -3,19 +3,17 @@
 @theme {
   --font-sans: var(--font-inter);
   --font-heading: var(--font-syne);
-  --font-mono: var(--font-fira-code);
   
-  --color-cyber-black: #000000;
-  --color-cyber-blue: #3b82f6;
-  --color-cyber-cyan: #06b6d4;
-  --color-cyber-dark: #050505;
-  
-  --animate-glitch: glitch 1s linear infinite;
-  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --color-background: #0B0F14;
+  --color-primary: #00BFFF;
+  --color-secondary: #22D3EE;
+  --color-success: #10B981;
+  --color-surface: #151A21;
+  --color-surface-hover: #1E252F;
 }
 
 :root {
-  --background: #000000;
+  --background: #0B0F14;
   --foreground: #ffffff;
 }
 
@@ -27,87 +25,44 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@utility glass-panel {
-  @apply bg-black/70 backdrop-blur-md border border-cyber-blue/30 shadow-[0_0_15px_rgba(59,130,246,0.1)];
+@utility container-custom {
+  @apply max-w-[1100px] mx-auto px-6 md:px-12;
 }
 
-@utility neon-text {
-  text-shadow: 0 0 5px rgba(59, 130, 246, 0.8), 0 0 10px rgba(59, 130, 246, 0.5);
+@utility section-padding {
+  @apply py-16 md:py-[100px];
 }
 
-@utility neon-border {
-  box-shadow: 0 0 5px rgba(59, 130, 246, 0.5), inset 0 0 5px rgba(59, 130, 246, 0.2);
+@utility heading-xl {
+  @apply text-4xl md:text-6xl font-bold tracking-tight leading-[1.1];
 }
 
-@utility text-glow {
-  text-shadow: 0 0 10px rgba(6, 182, 212, 0.7);
+@utility heading-lg {
+  @apply text-3xl md:text-4xl font-bold tracking-tight leading-[1.2];
 }
 
-@keyframes glitch {
-  2%, 64% { transform: translate(2px,0) skew(0deg); }
-  4%, 60% { transform: translate(-2px,0) skew(0deg); }
-  62% { transform: translate(0,0) skew(5deg); }
+@utility text-body {
+  @apply text-base md:text-lg text-gray-400 leading-relaxed max-w-[65ch];
 }
 
-@keyframes radarSweep {
-  0% { transform: rotate(0deg); opacity: 0.85; }
-  100% { transform: rotate(360deg); opacity: 0.85; }
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-@keyframes radarPulse {
-  0% { stroke-opacity: 0.85; fill-opacity: 0.24; }
-  100% { stroke-opacity: 0; fill-opacity: 0; }
+::-webkit-scrollbar-track {
+  background: var(--background);
 }
 
-@keyframes logScroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+::-webkit-scrollbar-thumb {
+  background: #1E252F;
+  border-radius: 4px;
 }
 
-.scanlines {
-  background: linear-gradient(
-    to bottom,
-    rgba(255,255,255,0),
-    rgba(255,255,255,0) 50%,
-    rgba(0,0,0,0.2) 50%,
-    rgba(0,0,0,0.2)
-  );
-  background-size: 100% 4px;
-}
-
-.bg-grid {
-  background-size: 40px 40px;
-  background-image: linear-gradient(to right, rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
-}
-
-.radar-sweep {
-  transform-origin: 60px 60px;
-  animation: radarSweep 2.8s linear infinite;
-}
-
-.radar-pulse {
-  animation: radarPulse 2.4s ease-out infinite;
-}
-
-.radar-ring {
-  animation: radarPulse 3.2s ease-out infinite;
-}
-
-.system-log-wrap {
-  display: flex;
-  width: 200%;
-  gap: 24px;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.system-log {
-  width: 50%;
-  animation: logScroll 18s linear infinite;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.75);
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
 }
